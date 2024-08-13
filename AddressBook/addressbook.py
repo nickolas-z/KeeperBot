@@ -1,6 +1,7 @@
 from collections import UserDict
 from datetime import datetime, date, timedelta
 from .record import Record
+from .birthday import Birthday
 from typing import Union
 from colorama import Fore, Style, init
 
@@ -99,7 +100,7 @@ class AddressBook(UserDict):
                         {
                             "name": record.name.value,
                             "congratulation_date": congratulation_date.strftime(
-                                "%d.%m.%Y"
+                                Birthday.BIRTHDAY_FORMAT
                             ),
                         }
                     )
