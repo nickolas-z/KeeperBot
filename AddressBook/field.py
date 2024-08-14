@@ -28,6 +28,11 @@ class Field:
     def reset_value(self) -> None:
         """Reset the value of the Field object to its initial value."""
         self.value = ""
+    
+    def __eq__(self, other) -> bool:
+        """Compare the other with current object."""
+        print(f"Call eq for field {self.value} to {other}")
+        return self.value == other
 
     def validate(self) -> None:
         """Validate the value of the Field object."""

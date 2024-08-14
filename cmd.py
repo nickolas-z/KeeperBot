@@ -20,6 +20,7 @@ class Cmd(Enum):
     BIRTHDAY_SHOW = "show-birthday"
     BIRTHDAY_SHOW_ALL = "birthdays"
     HELP = "help"
+    SEARCH_BY = "search-by"
     YES = "yes"
     NO = "no"
 

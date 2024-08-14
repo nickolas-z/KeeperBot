@@ -107,6 +107,24 @@ class AddressBook(UserDict):
 
         return upcoming_birthdays
 
+    def find_contacts_by_field(self, field_name: str, value:any):
+        """Find a record by field name.
+        Args:
+            field_name (str): The field to search for.
+            value (any): The value to search for.
+        Returns:
+           list: The found records.
+        """
+
+        result = list()
+        for item in self.data.values():
+            if field_name == "phone" or field_name == "phones":
+                if(value in item.phones):
+                    result.append(item)
+            elif hasattr(item,field_name) and getattr(item, field_name).__str__() == value:
+                result.append(item)
+        return result
+
     def sort_records(self) -> None:
         """Sort the records in the address book by name."""
         sorted_records = sorted(

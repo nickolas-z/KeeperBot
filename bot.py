@@ -258,6 +258,10 @@ class Bot(Application):
         )
         print(f"{Fore.GREEN}\thello {Fore.WHITE}- get a greeting from the bot;")
         print(
+            f"{Fore.GREEN}\tsearch-by {Fore.YELLOW}[field] [value]{Fore.WHITE} "
+            f"- find contants by specified field and value;"
+        )
+        print(
             f"{Fore.GREEN}\tclose {Fore.WHITE}or {Fore.GREEN}exit {Fore.WHITE}- close the program."
         )
 
@@ -301,6 +305,8 @@ class Bot(Application):
                     self.__show_help()
                 case Cmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
+                case Cmd.SEARCH_BY:
+                    print(f"{Fore.GREEN}{self.search_by(args)}") 
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
@@ -335,3 +341,21 @@ class Bot(Application):
             return f"Address for {name} added."
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}")
+        
+    @input_error
+    def search_by(self, args):
+        if len(args) != 2:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: search-by [field] [value]{Style.RESET_ALL}"
+            )
+        field, value = args
+
+        records = self.book.find_contacts_by_field(field, value)
+
+        if records:
+            result = ""
+            for record in records:
+                result += f"\n{str(record)}"
+            return result.strip()
+        else: 
+            raise KeyError(f"{Fore.RED}Contacts not found. {Style.RESET_ALL}")
