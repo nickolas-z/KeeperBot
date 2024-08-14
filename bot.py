@@ -256,6 +256,19 @@ class Bot(Application):
         print(
             f"{Fore.GREEN}\tbirthdays{Fore.WHITE} - show birthdays that will occur within the next week;"
         )
+        print(
+            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
+        )
+        print(
+            f"{Fore.GREEN}\tedit-contact-phone {Fore.YELLOW}[name] [old phone] [new phone] {Fore.WHITE}- update contact phone;"
+        )
+        print(
+            f"{Fore.GREEN}\tdelete-contact-phone {Fore.YELLOW}[name] [phone number] {Fore.WHITE}- delete contact phone;"
+        )
+        print(
+            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
+        )
+        print(f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;")
         print(f"{Fore.GREEN}\thello {Fore.WHITE}- get a greeting from the bot;")
         print(
             f"{Fore.GREEN}\tsearch-by {Fore.YELLOW}[field] [value]{Fore.WHITE} "
@@ -306,7 +319,17 @@ class Bot(Application):
                 case Cmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
                 case Cmd.SEARCH_BY:
-                    print(f"{Fore.GREEN}{self.search_by(args)}") 
+                    print(f"{Fore.GREEN}{self.search_by(args)}")
+                case Cmd.EDIT:
+                    print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
+                case Cmd.EDIT_CONTACT_PHONE:
+                    print(f"{Fore.MAGENTA}{self.edit_contact_phone(args)}")
+                case Cmd.DELETE:
+                    print(f"{Fore.MAGENTA}{self.delete_contact_info(args)}")
+                case Cmd.DELETE_CONTACT_PHONE:
+                    print(f"{Fore.MAGENTA}{self.delete_contact_phone(args)}")
+                case Cmd.DELETE_CONTACT:
+                    print(f"{Fore.MAGENTA}{self.delete_contact(args)}")
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
@@ -359,3 +382,69 @@ class Bot(Application):
             return result.strip()
         else: 
             raise KeyError(f"{Fore.RED}Contacts not found. {Style.RESET_ALL}")
+        
+    @input_error
+    def delete_contact(self, args):
+        name, *_ = args
+        record = self.book.find_contact(name)
+        if record:
+            return self.book.delete(name)
+        else: 
+            return f'Contact with name {name} not found'
+
+    
+    @input_error
+    def edit_contact_info(self, args):
+        if len(args) < 3:
+            raise ValueError(
+                    f"{Fore.RED}Invalid input. Use: edit-contact-info [name] [field name] [new value]{Style.RESET_ALL}"
+                )
+        name, field, new_value, *_= args
+        record = self.book.find_contact(name)
+        method = field.lower()
+        if record:
+            return getattr(record, f"edit_{method}" )(new_value)
+        else: 
+            return f'Contact with name {name} not found'
+
+    
+    @input_error
+    def delete_contact_info(self, args):
+        if len(args) < 2:
+            raise ValueError(
+                    f"{Fore.RED}Invalid input. Use: delete-contact-info [name] [field name]{Style.RESET_ALL}"
+                )
+        name, field, *_ = args
+        record = self.book.find_contact(name)
+        method = field.lower()
+        if record:
+            return getattr(record, f"delete_{method}" )()
+        else: 
+            return f'Contact with name {name} not found'
+
+    @input_error
+    def edit_contact_phone(self, args):
+        if len(args) < 3:
+            raise ValueError(
+                    f"{Fore.RED}Invalid input. Use: edit-contact-phone [name] [old phone] [new phone]{Style.RESET_ALL}"
+                )
+        name, old_number, new_number, *_ = args
+        record = self.book.find_contact(name)
+        if record:
+            return record.edit_phone(old_number, new_number)
+        else: 
+            return f'Contact with name {name} not found'
+
+    @input_error
+    def delete_contact_phone(self, args):
+        if len(args) < 2:
+            raise ValueError(
+                    f"{Fore.RED}Invalid input. Use: delete-contact-phone [name] [phone number]{Style.RESET_ALL}"
+                )
+        name, number, *_ = args
+        record = self.book.find_contact(name)
+        if record:
+            return record.remove_phone(number)
+        else: 
+            return f'Contact with name {name} not found'
+
