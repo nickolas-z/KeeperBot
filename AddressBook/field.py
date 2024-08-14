@@ -31,6 +31,8 @@ class Field:
     
     def __eq__(self, other) -> bool:
         """Compare the other with current object."""
+        if isinstance(other, self.__class__):
+            return self.value == other.value
         return self.value == other
 
     def validate(self) -> None:
