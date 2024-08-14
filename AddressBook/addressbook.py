@@ -107,7 +107,7 @@ class AddressBook(UserDict):
 
         return upcoming_birthdays
 
-    def find_contacts_by_field(self, field_name: str, value:any):
+    def find_contacts_by_field(self, field_name: str, value: any):
         """Find a record by field name.
         Args:
             field_name (str): The field to search for.
@@ -119,10 +119,12 @@ class AddressBook(UserDict):
         result = list()
         for item in self.data.values():
             if field_name == "phone" or field_name == "phones":
-                if(value in item.phones):
+                if value in item.phones or any([value in phone.__str__() for phone in item.phones]):
                     result.append(item)
-            elif hasattr(item,field_name) and getattr(item, field_name).__str__() == value:
-                result.append(item)
+            elif hasattr(item, field_name):
+                field_value = getattr(item, field_name)
+                if field_value == value or value in field_value.__str__():
+                    result.append(item)
         return result
 
     def sort_records(self) -> None:
