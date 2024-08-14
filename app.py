@@ -2,7 +2,7 @@ from enum import Enum
 import pickle
 from colorama import Style, init, Fore
 from helpers import Application, print_execution_time
-from AddressBook import Record, AddressBook
+from AddressBook import Record, AddressBook, Birthday
 import readline
 
 
@@ -189,7 +189,7 @@ class Bot(Application):
         for name, record in self.book.data.items():
             birthday = ""
             if record.birthday:
-                birthday = f" Birthday: {record.birthday.value.strftime('%d.%m.%Y')}"
+                birthday = f" Birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT)}"
             result += str(record) + birthday + "\n"
         return result.strip()
 
@@ -253,7 +253,7 @@ class Bot(Application):
         name = args[0]
         record = self.book.find_contact(name)
         if record:
-            return f"{name}'s birthday: {record.birthday.value.strftime('%d.%m.%Y') if record.birthday else 'Not set'}"
+            return f"{name}'s birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'}"
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 

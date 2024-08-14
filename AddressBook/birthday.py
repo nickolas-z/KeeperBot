@@ -8,19 +8,34 @@ init(autoreset=True)
 class Birthday(Field):
     """Class for storing a birthday date. It has format validation (DD.MM.YYYY)."""
 
+    BIRTHDAY_FORMAT = "%d.%m.%Y"
+
     def __init__(self, value):
         self.date = self.validate(value)
         super().__init__(self.date)
 
     @staticmethod
     def validate(value):
-        """Check for the correctness of the birthday format."""
+        """
+        Check for the correctness of the birthday format.
+        The age of the contact should not exceed 100 years.
+        """
         try:
-            return datetime.strptime(value, "%d.%m.%Y")
+            date = datetime.strptime(value, Birthday.BIRTHDAY_FORMAT)
         except ValueError:
             raise ValueError(
                 f"{Fore.RED}Invalid date format. Use 'DD.MM.YYYY'.{Style.RESET_ALL}"
             )
+
+        current_date = datetime.now()
+        min_date = current_date.replace(year=current_date.year - 100)
+        max_date = current_date
+
+        if date < min_date or date > max_date:
+            raise ValueError(
+                f"{Fore.RED}Invalid date. Date must be between {min_date.strftime(Birthday.BIRTHDAY_FORMAT)} and {max_date.strftime(Birthday.BIRTHDAY_FORMAT)}.{Style.RESET_ALL}"
+            )
+        return date
 
     def __repr__(self) -> str:
         """
