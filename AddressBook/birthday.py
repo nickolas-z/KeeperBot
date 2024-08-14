@@ -11,8 +11,7 @@ class Birthday(Field):
     BIRTHDAY_FORMAT = "%d.%m.%Y"
 
     def __init__(self, value):
-        self.value = self.validate(value)
-        super().__init__(self.value)
+        super().__init__(self.validate(value).date())
 
     @staticmethod
     def validate(value):
