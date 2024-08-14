@@ -11,8 +11,7 @@ class Birthday(Field):
     BIRTHDAY_FORMAT = "%d.%m.%Y"
 
     def __init__(self, value):
-        self.date = self.validate(value)
-        super().__init__(self.date)
+        super().__init__(self.validate(value).date())
 
     @staticmethod
     def validate(value):
@@ -46,6 +45,10 @@ class Birthday(Field):
 
         """
         return f"{self.__class__.__name__}(value='{self.value}')"
+
+    def __str__(self):
+        """Return a string representation of the Birthday object."""
+        return f"{self.value.strftime(Birthday.BIRTHDAY_FORMAT)}"
 
 
 if __name__ == "__main__":
