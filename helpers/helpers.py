@@ -4,6 +4,8 @@ import os
 from functools import wraps
 from colorama import Fore, Style, init
 
+from AddressBook import InvalidEmailError
+
 HEADER_LENGTH = 90
 # Initialize colorama
 init(autoreset=True)
@@ -21,6 +23,26 @@ def print_header(_text):
     print("=" * HEADER_LENGTH)
     message_text = f" {_text} "
     print(f"{Fore.BLUE}{message_text:-^{HEADER_LENGTH}}", end="\n\n")
+
+
+def input_error(func):
+    """
+    Decorator for handling user input errors.
+    """
+
+    def inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except KeyError:
+            return Fore.RED + "This contact does not exist."
+        except ValueError as e:
+            return Fore.RED + str(e)
+        except IndexError:
+            return Fore.RED + "Enter user name."
+        except InvalidEmailError as e:
+            return Fore.RED + str(e)
+
+    return inner
 
 
 def print_footer(_text):

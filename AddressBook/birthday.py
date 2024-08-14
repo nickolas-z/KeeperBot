@@ -9,8 +9,8 @@ class Birthday(Field):
     """Class for storing a birthday date. It has format validation (DD.MM.YYYY)."""
 
     def __init__(self, value):
-        self.date = self.validate(value)
-        super().__init__(self.date)
+        self.value = self.validate(value)
+        super().__init__(self.value)
 
     @staticmethod
     def validate(value):
@@ -21,6 +21,10 @@ class Birthday(Field):
             raise ValueError(
                 f"{Fore.RED}Invalid date format. Use 'DD.MM.YYYY'.{Style.RESET_ALL}"
             )
+
+    def __str__(self):
+        """Return a string representation of the Birthday object."""
+        return f"{self.value.strftime('%d.%m.%Y')}"
 
     def __repr__(self) -> str:
         """

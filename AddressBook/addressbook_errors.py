@@ -14,3 +14,8 @@ class InvalidBirthdayError(Exception):
     """Exception for handling invalid birthdays."""
 
     pass
+
+
+class InvalidEmailError(Exception):
+    """Exception for handling invalid email addresses."""
+    pass

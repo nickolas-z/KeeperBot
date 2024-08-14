@@ -23,7 +23,7 @@ class AddressBook(UserDict):
             raise ValueError(f"{Fore.RED}Invalid record.{Style.RESET_ALL}")
         self.data[record.name.value] = record
 
-    def find_phone(self, phone: str) -> Union[str, None]:
+    def find_phone(self, phone: str) -> Union[Record, None]:
         """Find a contact by phone number.
 
         Args:

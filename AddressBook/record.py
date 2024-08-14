@@ -1,4 +1,7 @@
 from typing import Union
+
+from .address import Address
+from .email import Email
 from .name import Name
 from .phone import Phone
 from .birthday import Birthday
@@ -8,17 +11,19 @@ from colorama import Fore, Style
 class Record:
     """Class for storing contact information, including name and phone number list."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, user_name: str) -> None:
         """
         Initialize a new Record object.
 
         Args:
-            name (str): The name of the contact.
+            user_name (str): The name of the contact.
 
         """
-        self.name = Name(name)
+        self.name = Name(user_name)
         self.phones = []
         self.birthday = None
+        self.email = None
+        self.address = None
 
     def add_phone(self, phone_number: str) -> None:
         """
@@ -85,6 +90,14 @@ class Record:
         """
         self.birthday = Birthday(birthday)
 
+    def add_email(self, email):
+        """ 
+        Add an email to the record.
+        Args:
+            email (str): The email to add.
+        """
+        self.email = Email(email)
+
     def __str__(self) -> str:
         """
         Return a string representation of the Record object.
@@ -93,8 +106,18 @@ class Record:
             str: The string representation of the Record object.
 
         """
+        result = [f"Contact name: {self.name.value}"]
         phones_str = "; ".join(p.value for p in self.phones)
-        return f"Contact name: {self.name.value}, phones: {phones_str}."
+        if phones_str:
+            result.append(f"Phones: {phones_str}")
+        if self.email:
+            result.append(f"Email: {self.email.value}")
+        if self.birthday:
+            result.append(f"Birthday: {self.birthday.value.strftime('%d.%m.%Y')}")
+        if self.address:
+            result.append(f"Address: {self.address}")
+
+        return "; ".join(result)
 
     def __repr__(self) -> str:
         """
@@ -104,7 +127,22 @@ class Record:
             str: The string representation of the Record object.
 
         """
-        return f"{self.__class__.__name__}(value='{self.value}')"
+        return f"{self.__class__.__name__}(value='{self.name.value}')"
+
+    def __setstate__(self, state):
+        self.name = state.get("name", None)
+        self.phones = state.get("phones", [])
+        self.birthday = state.get("birthday", None)
+        self.email = state.get('email', None)
+        self.address = state.get('address', None)
+
+    def add_address(self, address):
+        """
+        Add an address to the record.
+        Args:
+            address (str): The address to add.
+        """
+        self.address = Address(address)
 
 
 if __name__ == "__main__":
