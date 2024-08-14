@@ -113,7 +113,7 @@ class Record:
         if self.email:
             result.append(f"Email: {self.email.value}")
         if self.birthday:
-            result.append(f"Birthday: {self.birthday.value.strftime('%d.%m.%Y')}")
+            result.append(f"Birthday: {self.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT)}")
         if self.address:
             result.append(f"Address: {self.address}")
 

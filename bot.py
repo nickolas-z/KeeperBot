@@ -2,7 +2,7 @@
 
 from colorama import Fore, Style, init
 
-from AddressBook import Record, AddressBook
+from AddressBook import Record, AddressBook, Birthday
 from cmd import Cmd
 from helpers import Application, input_error, print_execution_time
 
@@ -176,7 +176,7 @@ class Bot(Application):
         name = args[0]
         record = self.book.find_contact(name)
         if record:
-            return f"{name}'s birthday: {record.birthday.value.strftime('%d.%m.%Y') if record.birthday else 'Not set'}"
+            return f"{name}'s birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'}"
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
