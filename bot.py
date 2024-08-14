@@ -257,7 +257,7 @@ class Bot(Application):
             f"{Fore.GREEN}\tbirthdays{Fore.WHITE} - show birthdays that will occur within the next week;"
         )
         print(
-            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
+            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
         )
         print(
             f"{Fore.GREEN}\tedit-contact-phone {Fore.YELLOW}[name] [old phone] [new phone] {Fore.WHITE}- update contact phone;"

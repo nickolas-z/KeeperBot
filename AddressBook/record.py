@@ -71,6 +71,9 @@ class Record:
         else:
             return f"Contact \'{self.name.value}\' has  no phone number {old_number} in the book"
     
+    def edit_name(self, name):
+        self.name.value = name
+        return 'Contact info updated.'
 
     def edit_birthday(self, date):
         self.birthday = Birthday(date)
