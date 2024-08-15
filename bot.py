@@ -333,8 +333,6 @@ class Bot(Application):
                     self.__show_help()
                 case BotCmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
-                case BotCmd.SEARCH_BY:
-                    print(f"{Fore.GREEN}{self.search_by(args)}")
                 case BotCmd.EDIT:
                     print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
                 case BotCmd.EDIT_CONTACT_PHONE:
