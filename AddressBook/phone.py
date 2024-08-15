@@ -4,7 +4,7 @@ from colorama import Fore, Style
 
 
 class Phone(Field):
-    """Class for storing phone numbers. Has format validation (10 digits)."""
+    """Class for storing phone numbers. Validates international Phone numbers."""
 
     def __init__(self, value: str) -> None:
         """
@@ -14,14 +14,14 @@ class Phone(Field):
             value (str): The phone number value.
 
         Raises:
-            ValueError: If the phone number is not a 10-digit number.
-
+            ValueError: If the phone number does not follow the international format.
         """
-        if not self.is_valid(value):
+        normalized_value = self.normalize_phone(value)
+        if not self.is_valid(normalized_value):
             raise ValueError(
-                f"{Fore.RED}Phone number must be a 10-digit number.{Style.RESET_ALL}"
+                f"{Fore.RED}The phone number must be in international format and begin with '+' followed by 12 to 15 digits.{Style.RESET_ALL}"
             )
-        super().__init__(value)
+        super().__init__(normalized_value)
 
     @staticmethod
     def is_valid(value: str) -> bool:
@@ -33,16 +33,12 @@ class Phone(Field):
 
         Returns:
             bool: True if the phone number is valid, False otherwise.
-
         """
-        return (
-            value is not None
-            and value.strip() != ""
-            and value.isdigit()
-            and len(value) == 10
-        )
+        pattern = r"^\+\d{12,15}$"
+        return re.match(pattern, value) is not None
 
-    def normalize_phone(self, phone_number: str) -> str:
+    @staticmethod
+    def normalize_phone(phone_number: str) -> str:
         """
         Normalize and return a cleaned phone number.
 
@@ -55,30 +51,20 @@ class Phone(Field):
         """
         # Remove all characters except '+' at the beginning and digits
         cleaned_number = re.sub(r"(?!^\+)[\D]", "", phone_number)
-        length_number = len(cleaned_number)
 
         # Check if the number starts with '+'
         if cleaned_number.startswith("+"):
             # If yes, leave it as it is
             return cleaned_number
-        elif length_number == 9:  # format: 9 digits (e.g., 679910599)
-            return "+380" + cleaned_number
-        elif length_number == 10:  # format: 10 digits (e.g., 0679910599)
-            return "+38" + cleaned_number
-        elif length_number == 11 and cleaned_number.startswith(
-            "80"
-        ):  # format: 80xxxxxxxxx
-            return "+3" + cleaned_number
-        elif length_number == 12 and cleaned_number.startswith(
-            "380"
-        ):  # format: 380xxxxxxxxx
+
+        # If the number does not start with '+', add it manually
+        if len(cleaned_number) >= 12:  # minimum length of international number
             return "+" + cleaned_number
-        elif length_number == 12 and not cleaned_number.startswith(
-            "380"
-        ):  # other 12-digit numbers
-            return "+" + cleaned_number
-        else:  # all other cases
-            return "+38" + cleaned_number
+        else:
+            raise ValueError(
+                f"{Fore.RED}The phone number must be in international format and begin with '+' followed by 12 to 15 digits.{
+                    Style.RESET_ALL}"
+            )
 
     def __repr__(self) -> str:
         """
@@ -86,15 +72,17 @@ class Phone(Field):
 
         Returns:
             str: The string representation of the Phone object.
-
         """
         return f"{self.__class__.__name__}(value='{self.value}')"
 
 
 if __name__ == "__main__":
-    field = Phone("example value")
-    print(field.__doc__)
-    for name, func in field.__class__.__dict__.items():
-        if callable(func):
-            print(f"{Fore.RED}{name}{Style.RESET_ALL}")
-            print(f"{Fore.RED}{func.__doc__}{Style.RESET_ALL}")
+    try:
+        field = Phone("+123456789012")
+        print(field.__doc__)
+        for name, func in field.__class__.__dict__.items():
+            if callable(func):
+                print(f"{Fore.RED}{name}{Style.RESET_ALL}")
+                print(f"{Fore.RED}{func.__doc__}{Style.RESET_ALL}")
+    except ValueError as e:
+        print(e)
