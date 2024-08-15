@@ -333,17 +333,17 @@ class Bot(Application):
                     self.__show_help()
                 case BotCmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
-                case Cmd.SEARCH_BY:
+                case BotCmd.SEARCH_BY:
                     print(f"{Fore.GREEN}{self.search_by(args)}")
-                case Cmd.EDIT:
+                case BotCmd.EDIT:
                     print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
-                case Cmd.EDIT_CONTACT_PHONE:
+                case BotCmd.EDIT_CONTACT_PHONE:
                     print(f"{Fore.MAGENTA}{self.edit_contact_phone(args)}")
-                case Cmd.DELETE:
+                case BotCmd.DELETE:
                     print(f"{Fore.MAGENTA}{self.delete_contact_info(args)}")
-                case Cmd.DELETE_CONTACT_PHONE:
+                case BotCmd.DELETE_CONTACT_PHONE:
                     print(f"{Fore.MAGENTA}{self.delete_contact_phone(args)}")
-                case Cmd.DELETE_CONTACT:
+                case BotCmd.DELETE_CONTACT:
                     print(f"{Fore.MAGENTA}{self.delete_contact(args)}")
                 case BotCmd.SEARCH_BY:
                     print(f"{Fore.GREEN}{self.search_by(args)}") 
