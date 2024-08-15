@@ -11,11 +11,13 @@ class Bot(Application):
     """
     Application class
     """
+    contacts_info = None
 
     def __init__(self, app_name, filename="addressbook.pkl"):
         super().__init__(app_name)
         self.filename = filename
         self.book = Bot.__load_data(self.filename)
+        Bot.contacts_info = self.book
 
     @staticmethod
     def __parse_input(user_input):
@@ -45,7 +47,16 @@ class Bot(Application):
         print(f"{Fore.YELLOW}{message}")
         user_input = input("Enter 'yes' to confirm: ")
         return user_input.strip().lower() == "yes"
+    
+    def data_saver(func):
+        def inner(*args, **kwargs):
+            result = func(*args, **kwargs)
+            Bot.__save_data(Bot.contacts_info)
 
+            return result
+        return inner  
+
+    @data_saver
     @input_error
     def add_contact(self, args):
         """
@@ -82,6 +93,7 @@ class Bot(Application):
             record.add_phone(phone)
         return message
 
+    @data_saver
     @input_error
     def change_contact(self, args):
         """
@@ -139,6 +151,7 @@ class Bot(Application):
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def add_birthday(self, args):
         """
@@ -181,7 +194,7 @@ class Bot(Application):
             return f"{name}'s birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'}"
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
-
+    
     @input_error
     def show_birthdays(self, args):
         """
@@ -293,6 +306,7 @@ class Bot(Application):
             f"{Fore.GREEN}\tclose {Fore.WHITE}or {Fore.GREEN}exit {Fore.WHITE}- close the program."
         )
 
+    @data_saver
     @print_execution_time
     def run(self):
         init(autoreset=True)
@@ -348,8 +362,7 @@ class Bot(Application):
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
-            Bot.__save_data(self.book)
-
+    @data_saver
     @input_error
     def add_email(self, args):
         if len(args) != 2:
@@ -365,6 +378,7 @@ class Bot(Application):
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def add_address(self, args):
         if len(args) != 2:
@@ -397,7 +411,8 @@ class Bot(Application):
             return result.strip()
         else: 
             raise KeyError(f"{Fore.RED}Contacts not found. {Style.RESET_ALL}")
-        
+
+    @data_saver      
     @input_error
     def delete_contact(self, args):
         name, *_ = args
@@ -407,7 +422,7 @@ class Bot(Application):
         else: 
             return f'Contact with name {name} not found'
 
-    
+    @data_saver
     @input_error
     def edit_contact_info(self, args):
         if len(args) < 3:
@@ -422,7 +437,7 @@ class Bot(Application):
         else: 
             return f'Contact with name {name} not found'
 
-    
+    @data_saver
     @input_error
     def delete_contact_info(self, args):
         if len(args) < 2:
@@ -437,6 +452,7 @@ class Bot(Application):
         else: 
             return f'Contact with name {name} not found'
 
+    @data_saver
     @input_error
     def edit_contact_phone(self, args):
         if len(args) < 3:
@@ -450,6 +466,7 @@ class Bot(Application):
         else: 
             return f'Contact with name {name} not found'
 
+    @data_saver
     @input_error
     def delete_contact_phone(self, args):
         if len(args) < 2:
