@@ -41,6 +41,8 @@ def input_error(func):
             return Fore.RED + "Enter user name."
         except InvalidEmailError as e:
             return Fore.RED + str(e)
+        except AttributeError:
+            return Fore.RED + "Please provide correct field name. Available list [birthday, email, address]"
 
     return inner
 
