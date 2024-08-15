@@ -1,11 +1,10 @@
 ﻿import pickle
-
+from tabulate import tabulate
 from colorama import Fore, Style, init
 
 from AddressBook import Record, AddressBook, Birthday
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-
 
 class Bot(Application):
     """
@@ -45,7 +44,7 @@ class Bot(Application):
         print(f"{Fore.YELLOW}{message}")
         user_input = input("Enter 'yes' to confirm: ")
         return user_input.strip().lower() == "yes"
-
+        
     @input_error
     def add_contact(self, args):
         """
@@ -109,12 +108,22 @@ class Bot(Application):
             str: list of contacts.
         """
         if not self.book.data:
-            return "No contacts found."
+            print("No contacts found.")
+        
+        table_data = [
+            [
+                record.name,
+                ", ".join(str(phone) for phone in record.phones),
+                record.email,
+                record.birthday,
+                record.address,
+                "+" if record.owner else ""
+                ] for name, record in self.book.data.items()
+            ]
 
-        result = ""
-        for name, record in self.book.data.items():
-            result += f"\n{str(record)}"
-        return result.strip()
+        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Owner"]
+
+        print(tabulate(table_data, headers, tablefmt="fancy_grid"))
 
     @input_error
     def show_phone(self, args):
@@ -201,13 +210,15 @@ class Bot(Application):
             )        
 
         if not upcoming_birthdays:
-            return f"No upcoming birthdays."
+            print(f"No upcoming birthdays.")
+            return
+        
+        table_data = [[record.name, record.birthday ] for record in upcoming_birthdays]
 
-        result = "Upcoming birthdays:\n"
-        for record in upcoming_birthdays:
-            result += f"{record.name}: {record.birthday}\n"
+        headers = ["Name", "Birthday"]
+        print(f"{Fore.GREEN}Upcoming birthdays:{Style.RESET_ALL}")
 
-        return result.strip()    
+        print(tabulate(table_data, headers, tablefmt="fancy_grid"))  
 
     @staticmethod
     def __save_data(book, filename="addressbook.pkl"):
@@ -280,12 +291,44 @@ class Bot(Application):
             f"{Fore.GREEN}\tclose {Fore.WHITE}or {Fore.GREEN}exit {Fore.WHITE}- close the program."
         )
 
+    @input_error
+    def add_owner(self):
+        print("Let's start by recording your personal details.", end="\n\n")
+
+        res = input(f"Record your data: {Fore.GREEN}Yes{Style.RESET_ALL}/{Fore.RED}No{Style.RESET_ALL} ")
+
+        if res.lower() == "Yes".lower():                
+            name = input("Your name: ")
+            
+            record = Record(name)
+            record.check_owner()
+                
+            self.book.add_record(record)
+        
+            telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
+                    
+            try:
+                record.add_phone(telephone)
+            except ValueError as e:
+                print(Fore.RED + str(e))
+                    
+            if record.name and record.phones:
+                print(f"{Fore.GREEN}{record.name} - {record.phones[0]} ")
+
+
     @print_execution_time
     def run(self):
         init(autoreset=True)
+        owner = self.book.get_owner()
+        
+        if owner is None:
+            self.add_owner()
+        else:
+            print(f"{Fore.MAGENTA}Glad to see you, {owner.name}!{Style.RESET_ALL}", end="\n\n")
+
         Bot.__show_help()
         print(f"Address book has {len(self.book.data)} contact(s).")
-
+        
         while True:
             user_input = input("Enter a command: ")
             parsed_input = Bot.__parse_input(user_input)
@@ -298,7 +341,8 @@ class Bot(Application):
 
             match command:
                 case BotCmd.CLOSE | BotCmd.EXIT:
-                    print(f"{Fore.YELLOW}Good bye!")
+                    print(f"{Fore.YELLOW}Good bye{' ' + str(owner.name) if owner else ''}!{Style.RESET_ALL}")
+
                     break
                 case BotCmd.HELLO:
                     print(f"{Fore.GREEN}How can I help you?")
@@ -309,9 +353,9 @@ class Bot(Application):
                 case BotCmd.CONTACT_SHOW_PHONES:
                     print(f"{Fore.CYAN}{self.show_phone(args)}")
                 case BotCmd.CONTACT_SHOW_ALL:
-                    print(f"{Fore.MAGENTA}{self.show_all()}")
+                    self.show_all()
                 case BotCmd.BIRTHDAY_ADD:
-                    print(f"{Fore.GREEN}{self.add_birthday(args)}")
+                    self.add_birthday(args)
                 case BotCmd.BIRTHDAY_SHOW:
                     print(f"{Fore.CYAN}{self.show_birthday(args)}")
                 case BotCmd.BIRTHDAY_SHOW_ALL:

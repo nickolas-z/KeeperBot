@@ -24,6 +24,14 @@ class Record:
         self.birthday = None
         self.email = None
         self.address = None
+        self.owner = False
+        
+    def check_owner(self):
+        """
+        Set status owner to the record.
+        
+        """
+        self.owner = True
 
     def add_phone(self, phone_number: str) -> None:
         """
@@ -116,6 +124,8 @@ class Record:
             result.append(f"Birthday: {self.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT)}")
         if self.address:
             result.append(f"Address: {self.address}")
+        if hasattr(self, 'owner') and self.owner:
+            result.append(f"Owner: {self.owner}")
 
         return "; ".join(result)
 
@@ -135,6 +145,8 @@ class Record:
         self.birthday = state.get("birthday", None)
         self.email = state.get('email', None)
         self.address = state.get('address', None)
+        self.owner = state.get('owner', False)
+
 
     def add_address(self, address):
         """
