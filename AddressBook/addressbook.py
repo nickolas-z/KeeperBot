@@ -67,43 +67,31 @@ class AddressBook(UserDict):
                 f"{Fore.RED}Record not found or invalid name.{Style.RESET_ALL}"
             )
 
-    def get_upcoming_birthdays(self):
-        """Function returns a list of dictionaries with users and their birthdays.
+    def get_upcoming_birthdays(self, n_days: int=0):
+        """
+        Function returns a list of dictionaries with users and
+        their birthdays for n days from today.
+
         Args:
-            _text: a list of dictionaries with users and their birthdays.
+            n_days: the number of days to check for upcoming birthdays form today.
         Return:
-            upcoming_birthdays: a list of dictionaries with users and their birthdays,
-                who celebrate their birthday this week.
+            upcoming_birthdays: a list of records with users who celebrate birthday this in n_days.
         """
         today = datetime.today().date()
         upcoming_birthdays = []
 
         for record in self.data.values():
             if record.birthday:
-                birthday = record.birthday.date.date()
+                birthday = record.birthday.value
                 birthday_this_year = birthday.replace(year=today.year)
 
                 if birthday_this_year < today:
                     birthday_this_year = birthday_this_year.replace(year=today.year + 1)
 
                 delta_days = (birthday_this_year - today).days
-
-                if 0 <= delta_days <= 7:
-                    congratulation_date = birthday_this_year
-
-                    if congratulation_date.weekday() >= 5:  # 5 - Saturday, 6 - Sunday
-                        congratulation_date += timedelta(
-                            days=(7 - congratulation_date.weekday())
-                        )
-
-                    upcoming_birthdays.append(
-                        {
-                            "name": record.name.value,
-                            "congratulation_date": congratulation_date.strftime(
-                                Birthday.BIRTHDAY_FORMAT
-                            ),
-                        }
-                    )
+                
+                if 0 <= delta_days <= n_days:
+                    upcoming_birthdays.append(record)
 
         return upcoming_birthdays
 

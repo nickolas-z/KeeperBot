@@ -1,7 +1,7 @@
 ﻿from enum import Enum
 
 
-class Cmd(Enum):
+class BotCmd(Enum):
     """
     Enum for available commands.
     """
@@ -18,7 +18,7 @@ class Cmd(Enum):
     ADD_ADDRESS = "add-address"
     BIRTHDAY_ADD = "add-birthday"
     BIRTHDAY_SHOW = "show-birthday"
-    BIRTHDAY_SHOW_ALL = "birthdays"
+    BIRTHDAY_SHOW_ALL = "show-birthdays"
     HELP = "help"
     SEARCH_BY = "search-by"
     YES = "yes"
@@ -43,4 +43,4 @@ class Cmd(Enum):
         Return:
             list: all available commands.
         """
-        return [str(cmd) for cmd in Cmd]
+        return [str(cmd) for cmd in BotCmd]
