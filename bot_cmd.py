@@ -31,6 +31,11 @@ class BotCmd(Enum):
     SEARCH_BY = "search-by"
     YES = "yes"
     NO = "no"
+    EDIT = 'edit-contact-info'
+    EDIT_CONTACT_PHONE = 'edit-contact-phone'
+    DELETE = 'delete-contact-info'
+    DELETE_CONTACT = 'delete-contact'
+    DELETE_CONTACT_PHONE = 'delete-contact-phone'
 
     def __str__(self):
         return self.value

@@ -64,6 +64,7 @@ class AddressBook(UserDict):
         """
         if name in self.data:
             del self.data[name]
+            return 'Contact deleted.'
         else:
             raise ValueError(
                 f"{Fore.RED}Record not found or invalid name.{Style.RESET_ALL}"

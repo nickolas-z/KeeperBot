@@ -49,7 +49,15 @@ class Record:
             phone_number (str): The phone number to remove.
 
         """
-        self.phones = [phone for phone in self.phones if phone.value != phone_number]
+
+        phone_record = self.find_phone(phone_number)
+
+        if phone_record:
+            self.phones.remove(phone_record)
+            return "Phone removed"
+        else:
+            return f"Contact \'{self.name.value}\' has  no phone number {phone_number} in the book"
+                
 
     def edit_phone(self, old_number, new_number: str) -> None:
         """
@@ -60,8 +68,40 @@ class Record:
             new_number (str): The new phone number to add.
 
         """
-        self.remove_phone(old_number)
-        self.add_phone(new_number)
+        if self.find_phone(old_number) is not None:
+            self.phones = [Phone(new_number) if phone.value == old_number else phone for phone in self.phones]
+            return "Phone updated"
+        else:
+            return f"Contact \'{self.name.value}\' has  no phone number {old_number} in the book"
+    
+    def edit_name(self, name):
+        self.name.value = name
+        return 'Contact info updated.'
+
+    def edit_birthday(self, date):
+        self.birthday = Birthday(date)
+        return 'Contact info updated.'
+
+    def delete_birthday(self):
+        self.birthday = None
+        return 'Contact info deleted.'
+    
+    def edit_address(self, new_address):
+        self.address = Address(new_address)
+        return 'Contact info updated.'
+    
+    def delete_address(self):
+        self.address = None
+        return 'Contact info deleted.'
+    
+    def edit_email(self, new_email):
+        self.email = Email(new_email)
+        return 'Contact info updated.'
+        
+    def delete_email(self):
+        self.email = None
+        return 'Contact info deleted.'
+
 
     def find_phone(self, phone_number: str) -> Union[Phone, None]:
         """
