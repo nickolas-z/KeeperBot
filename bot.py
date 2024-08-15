@@ -3,7 +3,7 @@
 from colorama import Fore, Style, init
 
 from AddressBook import Record, AddressBook, Birthday
-from cmd import Cmd
+from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
 
 
@@ -29,7 +29,7 @@ class Bot(Application):
         try:
             cmd, *args = user_input.split()
             cmd = cmd.strip().lower()
-            return Cmd(cmd), args
+            return BotCmd(cmd), args
         except ValueError:
             return None
 
@@ -173,26 +173,41 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: show-birthday [name]{Style.RESET_ALL}"
             )
+
         name = args[0]
+
         record = self.book.find_contact(name)
         if record:
             return f"{name}'s birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'}"
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
-    def birthdays(self):
+    @input_error
+    def show_birthdays(self, args):
         """
         This function displays birthdays that will occur within the next week.
         Return:
             str: list of birthdays.
         """
-        upcoming_birthdays = self.book.get_upcoming_birthdays()
+        upcoming_birthdays = list()
+
+        if len(args) == 0:
+            upcoming_birthdays = self.book.get_upcoming_birthdays()
+        elif len(args) == 1 and args[0].isdigit():
+            upcoming_birthdays = self.book.get_upcoming_birthdays(int(args[0]))
+        else:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: show-birthdays [number of days or empty for today]{Style.RESET_ALL}"
+            )        
+
         if not upcoming_birthdays:
-            return "No upcoming birthdays."
+            return f"No upcoming birthdays."
+
         result = "Upcoming birthdays:\n"
-        for entry in upcoming_birthdays:
-            result += f"{entry['name']}: {entry['congratulation_date']}\n"
-        return result.strip()
+        for record in upcoming_birthdays:
+            result += f"{record.name}: {record.birthday}\n"
+
+        return result.strip()    
 
     @staticmethod
     def __save_data(book, filename="addressbook.pkl"):
@@ -254,7 +269,7 @@ class Bot(Application):
             f"- show the birthday for the specified contact;"
         )
         print(
-            f"{Fore.GREEN}\tbirthdays{Fore.WHITE} - show birthdays that will occur within the next week;"
+            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} - show birthdays that will occur within the next number of days, empty for today;"
         )
         print(
             f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
@@ -295,28 +310,28 @@ class Bot(Application):
             command, args = parsed_input
 
             match command:
-                case Cmd.CLOSE | Cmd.EXIT:
+                case BotCmd.CLOSE | BotCmd.EXIT:
                     print(f"{Fore.YELLOW}Good bye!")
                     break
-                case Cmd.HELLO:
+                case BotCmd.HELLO:
                     print(f"{Fore.GREEN}How can I help you?")
-                case Cmd.CONTACT_ADD:
+                case BotCmd.CONTACT_ADD:
                     print(f"{Fore.GREEN}{self.add_contact(args)}")
-                case Cmd.CONTACT_CHANGE:
+                case BotCmd.CONTACT_CHANGE:
                     print(f"{Fore.YELLOW}{self.change_contact(args)}")
-                case Cmd.CONTACT_SHOW_PHONES:
+                case BotCmd.CONTACT_SHOW_PHONES:
                     print(f"{Fore.CYAN}{self.show_phone(args)}")
-                case Cmd.CONTACT_SHOW_ALL:
+                case BotCmd.CONTACT_SHOW_ALL:
                     print(f"{Fore.MAGENTA}{self.show_all()}")
-                case Cmd.BIRTHDAY_ADD:
+                case BotCmd.BIRTHDAY_ADD:
                     print(f"{Fore.GREEN}{self.add_birthday(args)}")
-                case Cmd.BIRTHDAY_SHOW:
+                case BotCmd.BIRTHDAY_SHOW:
                     print(f"{Fore.CYAN}{self.show_birthday(args)}")
-                case Cmd.BIRTHDAY_SHOW_ALL:
-                    print(f"{Fore.MAGENTA}{self.birthdays()}")
-                case Cmd.HELP:
+                case BotCmd.BIRTHDAY_SHOW_ALL:
+                    print(f"{Fore.MAGENTA}{self.show_birthdays(args)}")
+                case BotCmd.HELP:
                     self.__show_help()
-                case Cmd.ADD_EMAIL:
+                case BotCmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
                 case Cmd.SEARCH_BY:
                     print(f"{Fore.GREEN}{self.search_by(args)}")
@@ -330,6 +345,8 @@ class Bot(Application):
                     print(f"{Fore.MAGENTA}{self.delete_contact_phone(args)}")
                 case Cmd.DELETE_CONTACT:
                     print(f"{Fore.MAGENTA}{self.delete_contact(args)}")
+                case BotCmd.SEARCH_BY:
+                    print(f"{Fore.GREEN}{self.search_by(args)}") 
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
@@ -364,7 +381,7 @@ class Bot(Application):
             return f"Address for {name} added."
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}")
-        
+
     @input_error
     def search_by(self, args):
         if len(args) != 2:
