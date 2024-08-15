@@ -521,7 +521,7 @@ class Bot(Application):
 
         note = self.book.find_note_by_title(note_title)
         if note:
-            note.tags = [t for t in note.tags if t != tag]
+            note.tags.remove(Tag(tag))
             return f"Tag {tag} deleted from {note_title}."
         else:
             raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
