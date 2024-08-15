@@ -1,11 +1,13 @@
 from typing import Union
-
-from .address import Address
-from .email import Email
-from .name import Name
-from .phone import Phone
-from .birthday import Birthday
+from AddressBook.tag import Tag
+from AddressBook.note import Note
+from AddressBook.address import Address
+from AddressBook.email import Email
+from AddressBook.name import Name
+from AddressBook.phone import Phone
+from AddressBook.birthday import Birthday
 from colorama import Fore, Style
+
 
 
 class Record:
@@ -24,6 +26,7 @@ class Record:
         self.birthday = None
         self.email = None
         self.address = None
+        self.notes: list[Note] = []
 
     def add_phone(self, phone_number: str) -> None:
         """
@@ -97,6 +100,99 @@ class Record:
             email (str): The email to add.
         """
         self.email = Email(email)
+        
+    def add_note(self, title, value, tags=None):
+        """
+        Add a note to the record.
+        Args:
+            title (str): The title of the note.
+            value (str): The content of the note.
+            tags (list): The list of tags for the note. Default is None.
+        
+        Raises:
+            ValueError: If a note with the same title already exists.
+        """
+        if self.find_note_by_title(title):
+            raise ValueError(f"{Fore.RED}Note with the same title already exists.{Style.RESET_ALL}")
+        
+        note = Note(title, value)
+        if tags:
+            for tag in tags:
+                note.tags.append(Tag(tag))
+        self.notes.append(note)
+        
+    def remove_note_by_title(self, title):
+        """
+        Remove a note from the record by title.
+        Args:
+            title (str): The title of the note to remove.
+        """
+        self.notes = [note for note in self.notes if note.title != title]
+        
+    def edit_note_by_title(self, title, new_title, new_value):
+        """
+        Edit a note in the record by title.
+        Args:
+            title (str): The title of the note to edit.
+            new_title (str): The new title of the note.
+            new_value (str): The new content of the note.
+            
+        Raises:
+            ValueError: If a note with the same title already exists or the note is not found. 
+        """
+        note = self.find_note_by_title(title)
+        if self.find_note_by_title(new_title):
+            raise ValueError(f"{Fore.RED}Note with the same title already exists.{Style.RESET_ALL}")
+        
+        if note:
+            note.title = new_title
+            note.value = new_value
+        else:
+            raise ValueError(f"{Fore.RED}Note not found.{Style.RESET_ALL}")
+                
+    def find_note_by_title(self, title):
+        """
+        Find a note in the record by title.
+        Args:
+            title (str): The title of the note to find.
+        Returns:
+            Note: The Note object if found, None otherwise.
+        """
+        for note in self.notes:
+            if note.title == title:
+                return note
+        return None
+    
+    def add_tag_to_note_by_title(self, title, tags: list):
+        """
+        Add tags to a note in the record by title.
+        Args:
+            title (str): The title of the note to add tags to.
+            tags (list): The list of tags to add to the note.
+        Raises:
+            ValueError: If the note is not found.
+        """
+        note = self.find_note_by_title(title)
+        if note:
+            for tag in tags:
+                note.tags.append(Tag(tag))
+        else:
+            raise ValueError(f"{Fore.RED}Note not found.{Style.RESET_ALL}")
+        
+    def remove_tag_from_note_by_title(self, title, tag):
+        """
+        Remove a tag from a note in the record by title.
+        Args:
+            title (str): The title of the note to remove the tag from.
+            tag (str): The tag to remove.
+        Raises:
+            ValueError: If the note is not found.
+        """
+        note = self.find_note_by_title(title)
+        if note:
+            note.tags = [t for t in note.tags if t.value != tag]
+        else:
+            raise ValueError(f"{Fore.RED}Note not found.{Style.RESET_ALL}")
 
     def __str__(self) -> str:
         """
@@ -116,6 +212,9 @@ class Record:
             result.append(f"Birthday: {self.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT)}")
         if self.address:
             result.append(f"Address: {self.address}")
+        if self.notes:
+            notes_str = "\n".join(str(note) for note in self.notes)
+            result.append(f"Notes:\n{notes_str}")
 
         return "; ".join(result)
 
@@ -135,6 +234,7 @@ class Record:
         self.birthday = state.get("birthday", None)
         self.email = state.get('email', None)
         self.address = state.get('address', None)
+        self.notes = state.get('notes', [])
 
     def add_address(self, address):
         """
