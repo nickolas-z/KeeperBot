@@ -9,10 +9,15 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
-
 class AddressBook(UserDict):
     """Class for storing and managing contact records."""
-
+    
+    def get_owner(self) -> Union[Record, None]:
+        for record in self.data.values():
+            if getattr(record, 'owner', False) == True:
+                return record
+        return None
+        
     def add_record(self, record: Record) -> None:
         """Add a record to the address book.
 

@@ -27,6 +27,14 @@ class Record:
         self.email = None
         self.address = None
         self.notes: list[Note] = []
+        self.owner = False
+        
+    def check_owner(self):
+        """
+        Set status owner to the record.
+        
+        """
+        self.owner = True
 
     def add_phone(self, phone_number: str) -> None:
         """
@@ -255,6 +263,8 @@ class Record:
         if self.notes:
             notes_str = "\n".join(str(note) for note in self.notes)
             result.append(f"Notes:\n{notes_str}")
+        if hasattr(self, 'owner') and self.owner:
+            result.append(f"Owner: {self.owner}")
 
         return "; ".join(result)
 
@@ -275,6 +285,8 @@ class Record:
         self.email = state.get('email', None)
         self.address = state.get('address', None)
         self.notes = state.get('notes', [])
+        self.owner = state.get('owner', False)
+
 
     def add_address(self, address):
         """
