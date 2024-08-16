@@ -9,13 +9,18 @@ from tabulate import tabulate
 from AddressBook import Record, AddressBook, Birthday
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-
+from AddressBook.addressbook_errors import (
+    InvalidEmailError,
+    InvalidPhoneNumberError,
+    InvalidBirthdayError,
+)
 
 
 class Bot(Application):
     """
     Application class
     """
+
     contacts_info = None
 
     def __init__(self, app_name, filename="addressbook.pkl"):
@@ -23,7 +28,7 @@ class Bot(Application):
         self.filename = filename
         self.book = Bot.__load_data(self.filename)
 
-        self.commands_list = BotCmd.get_all_commands()
+        self.commands_list = BotCmd.get_all_commands(exclude_prefix="@")
         self.command_completer = WordCompleter(self.commands_list, ignore_case=True)
         self.session = PromptSession(completer=self.command_completer)
         Bot.contacts_info = self.book
@@ -69,45 +74,54 @@ class Bot(Application):
 
     @data_saver
     @input_error
-    def add_contact(self, args):
+    def add_contact(self, args=None):
         """
-        This function adds a new contact to the address book.
+        This function adds a new contact to the address book step-by-step.
         Args:
-            args: list of command arguments.
+            args: list of command arguments (optional).
         Return:
             str: message indicating the execution result.
         """
-        if len(args) < 2:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add [name] [phone]{Style.RESET_ALL}"
-            )
-        name, phone, *_ = args
+        if args is None or len(args) < 1:
+            name = input("Please enter the name of the contact: ")
+        else:
+            name = args[0]
 
-        # Check if the phone number already exists for another contact
-        existing_contact = self.book.find_phone(phone)
-        if existing_contact:
-            if existing_contact.name.value != name:
-                # Ask for confirmation to add the same phone number to the new contact
-                message = (
-                    f"Phone number {Fore.WHITE}{phone}{Fore.YELLOW} already exists for contact "
-                    f"{Fore.WHITE}{existing_contact.name}{Fore.YELLOW}. "
-                    f"Add it to {Fore.WHITE}{name}{Fore.YELLOW}?"
+        while True:
+            phone = input(f"Please enter the phone number for {name}: ")
+
+            try:
+                existing_contact = self.book.find_phone(phone)
+                if existing_contact:
+                    if existing_contact.name.value != name:
+                        message = (
+                            f"Phone number {Fore.WHITE}{phone}{Fore.YELLOW} already exists for contact "
+                            f"{Fore.WHITE}{existing_contact.name}{Fore.YELLOW}. "
+                            f"Add it to {Fore.WHITE}{name}{Fore.YELLOW}?"
+                        )
+                        if not Bot.__confirm(message):
+                            print(f"{Fore.RED}Operation cancelled.{Style.RESET_ALL}")
+                            continue
+
+                record = self.book.find_contact(name)
+                message = "Contact updated."
+                if record is None:
+                    record = Record(name)
+                    self.book.add_record(record)
+                    message = "Contact added."
+
+                record.add_phone(phone)
+                return message
+            except InvalidPhoneNumberError as e:
+                print(str(e))
+                print(
+                    f"{Fore.YELLOW}Please enter a valid phone number.{Style.RESET_ALL}"
                 )
-                if not Bot.__confirm(message):
-                    return f"{Fore.RED}Operation cancelled.{Style.RESET_ALL}"
 
-        record = self.book.find_contact(name)
-        message = "Contact updated."
-        if record is None:
-            record = Record(name)
-            self.book.add_record(record)
-            message = "Contact added."
-        if phone:
-            record.add_phone(phone)
-        return message
+                continue
 
-    
-
+    @data_saver
+    @input_error
     def show_all(self):
         """This function displays all contacts.
         Return:
@@ -133,10 +147,20 @@ class Bot(Application):
                     ", ".join(str(tag) for tag in note.tags) for note in record.notes
                 ),
                 "+" if record.owner else "",
-            ] for record in records
+            ]
+            for record in records
         ]
 
-        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
+        headers = [
+            "Name",
+            "Phone",
+            "Email",
+            "Birthday",
+            "Address",
+            "Notes",
+            "Tag",
+            "Owner",
+        ]
 
         return tabulate(table_data, headers, tablefmt="fancy_grid")
 
@@ -167,28 +191,6 @@ class Bot(Application):
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
-    @data_saver
-    @input_error
-    def add_birthday(self, args):
-        """
-        This function adds a birthday to a contact.
-        Args:
-            args: list of command arguments.
-        Return:
-            str: message indicating the execution result.
-        """
-        if len(args) != 2:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-birthday [name] [birthday]{Style.RESET_ALL}"
-            )
-        name, birthday = args
-        record = self.book.find_contact(name)
-        if record:
-            record.add_birthday(birthday)
-            return f"Birthday for {name} added."
-        else:
-            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
-
     @input_error
     def show_birthday(self, args):
         """
@@ -216,6 +218,49 @@ class Bot(Application):
             print(tabulate(table_data, headers, tablefmt="fancy_grid"))
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+
+    @data_saver
+    @input_error
+    def show_info(self, args=None):
+        """
+        This function provides a menu to show different types of contact information.
+        Args:
+            args: list of command arguments (optional).
+        Return:
+            str: message indicating the execution result.
+        """
+        print("Choose the information you want to display:")
+        print("1. Show all contacts")
+        print("2. Show phones for a contact")
+        print("3. Show birthday for a contact")
+        print("4. Show upcoming birthdays")
+        choice = input("Enter the number of your choice: ")
+
+        if choice == "1":
+            return self.show_all()
+
+        elif choice == "2":
+            if args is None or len(args) < 1:
+                name = input("Please enter the name of the contact: ")
+            else:
+                name = args[0]
+            return self.show_phone([name])
+
+        elif choice == "3":
+            if args is None or len(args) < 1:
+                name = input("Please enter the name of the contact: ")
+            else:
+                name = args[0]
+            return self.show_birthday([name])
+
+        elif choice == "4":
+            days = input(
+                "Enter the number of days to show upcoming birthdays (or press Enter to show for today): "
+            )
+            return self.show_birthdays([days])
+
+        else:
+            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
 
     @input_error
     def show_birthdays(self, args):
@@ -280,90 +325,114 @@ class Bot(Application):
         This function displays help for available commands.
         """
         print(f"{Fore.WHITE}Available commands (tab to complete):")
+        print(f"{Fore.GREEN}\tall - {Fore.YELLOW}Show {Fore.WHITE}all contacs.")
         print(
-            f"{Fore.GREEN}\tadd {Fore.YELLOW}[name] [phone]{Fore.WHITE} "
-            f"- add a new contact with a name and phone number, or add a phone number to an existing contact;"
-        )
-    
-        print(
-            f"{Fore.GREEN}\tadd-email {Fore.YELLOW}[name] [email]{Fore.WHITE} "
-            f"- add/replace an email for the specified contact;"
+            f"{Fore.GREEN}\tadd-new-contact {Fore.YELLOW} "
+            f"- add a new contact{Fore.WHITE} with a name and phone number, or add a phone number to an existing contact;"
         )
         print(
-            f"{Fore.GREEN}\tadd-address {Fore.YELLOW}[name] [address]{Fore.WHITE} "
-            f"- add/replace an address for the specified contact;"
+            f"{Fore.GREEN}\tadd-contact-info {Fore.YELLOW}[name]"
+            f"- {Fore.WHITE}add contact information (phone, email, address, note, tags, boirthday) for the specified contact;"
         )
         print(
-            f"{Fore.GREEN}\tadd-note {Fore.YELLOW}[author_name]{Fore.WHITE} "
-            f"- add note for the specified contact;"
+            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name]- {Fore.WHITE}edit or update contact info (name, phone, email, address, boirthday);"
         )
         print(
-            f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- edit note by title;"
+            f"{Fore.GREEN}\tdelete-menu {Fore.YELLOW}- delete{Fore.WHITE} (contact, name, phone, email, address, boirthday, note);"
         )
         print(
-            f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- delete note by title;"
-        )
-        print(
-            f"{Fore.GREEN}\tadd-tags {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- add tags to note;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-tag {Fore.YELLOW}[tag] [note_title]{Fore.WHITE} "
-            f"- delete specified tag for specified note;"
-        )
-        print(
-            f"{Fore.GREEN}\tget-notes-by-tag {Fore.YELLOW}[tag]{Fore.WHITE} "
-            f"- finds all notes with specified tag;"
-        )
-        print(
-            f"{Fore.GREEN}\tget-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- finds note with specified title;"
-        )
-        print(
-            f"{Fore.GREEN}\tget-notes {Fore.YELLOW}[name]{Fore.WHITE} "
-            f"- returns all notes for specified contact;"
+            f"{Fore.GREEN}\tclose {Fore.WHITE}or {Fore.GREEN}exit - {Fore.YELLOW}close {Fore.WHITE}the program."
         )
 
-        print(
-            f"{Fore.GREEN}\tphone {Fore.YELLOW}[name]{Fore.WHITE} - show phone numbers for the specified contact;"
-        )
-        print(f"{Fore.GREEN}\tall{Fore.WHITE} - show all contacts in the address book;")
-        print(
-            f"{Fore.GREEN}\tadd-birthday {Fore.YELLOW}[name] [birthday] {Fore.WHITE}"
-            f"- add a birthday (DD.MM.YYYY) for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tshow-birthday {Fore.YELLOW}[name] {Fore.WHITE}"
-            f"- show the birthday for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} - show birthdays that will occur within the next number of days, empty for today;"
-        )
-        print(
-            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
-        )
-        print(
-            f"{Fore.GREEN}\tedit-contact-phone {Fore.YELLOW}[name] [old phone] [new phone] {Fore.WHITE}- update contact phone;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-contact-phone {Fore.YELLOW}[name] [phone number] {Fore.WHITE}- delete contact phone;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;"
-        )
-        print(f"{Fore.GREEN}\thello {Fore.WHITE}- get a greeting from the bot;")
-        print(
-            f"{Fore.GREEN}\tsearch-by {Fore.YELLOW}{Fore.WHITE} "
-            f"- find contants by specified field and value;"
-        )
-        print(
-            f"{Fore.GREEN}\tclose {Fore.WHITE}or {Fore.GREEN}exit {Fore.WHITE}- close the program."
-        )
+    @data_saver
+    @input_error
+    def add_contact_info(self, args):
+        """
+        This function provides a menu to add different types of contact information.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: message indicating the execution result.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: add-contact-info [name]{Style.RESET_ALL}"
+            )
+
+        name = args[0]
+        print("Choose the information you want to add:")
+        print("1. Phone")
+        print("2. Email")
+        print("3. Address")
+        print("4. Note")
+        print("5. Tags")
+        print("6. Birthday")
+        choice = input("Enter the number of your choice: ")
+
+        record = self.book.find_contact(name)
+        if not record:
+            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+
+        if choice == "1":
+            while True:
+                phone = input(f"Enter the phone number for {name}: ")
+                try:
+                    record.add_phone(phone)
+                    return f"Phone number {phone} added for {name}."
+                except InvalidPhoneNumberError as e:
+                    print(str(e))
+
+        elif choice == "2":
+            while True:
+                email = input(f"Enter the email address for {name}: ")
+                try:
+                    record.add_email(email)
+                    return f"Email address {email} added for {name}."
+                except InvalidEmailError as e:
+                    print(str(e))
+
+        elif choice == "3":
+            while True:
+                address = input(f"Enter the address for {name}: ")
+                try:
+                    record.add_address(address)
+                    return f"Address {address} added for {name}."
+                except ValueError as e:
+                    print(str(e))
+
+        elif choice == "4":
+            while True:
+                note_title = input(f"Enter the title of the note for {name}: ")
+                note_content = input("Enter the content of the note: ")
+                try:
+                    record.add_note(note_title, note_content)
+                    return f"Note '{note_title}' added for {name}."
+                except ValueError as e:
+                    print(str(e))
+
+        elif choice == "5":
+            while True:
+                note_title = input(
+                    f"Enter the title of the note to add tags for {name}: "
+                )
+                tags = input("Enter tags separated by spaces: ").split()
+                try:
+                    record.add_tag_to_note_by_title(note_title, tags)
+                    return f"Tags added to note '{note_title}' for {name}."
+                except ValueError as e:
+                    print(str(e))
+
+        elif choice == "6":
+            while True:
+                birthday = input(f"Enter the birthday (DD.MM.YYYY) for {name}: ")
+                try:
+                    record.add_birthday(birthday)
+                    return f"Birthday {birthday} added for {name}."
+                except InvalidBirthdayError as e:
+                    print(str(e))
+
+        else:
+            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
 
     @data_saver
     @input_error
@@ -423,7 +492,9 @@ class Bot(Application):
 
             match command:
                 case BotCmd.CLOSE | BotCmd.EXIT:
-                    print(f"{Fore.YELLOW}Good bye{' ' + str(owner.name) if owner else ''}!{Style.RESET_ALL}")
+                    print(
+                        f"{Fore.YELLOW}Good bye{' ' + str(owner.name) if owner else ''}!{Style.RESET_ALL}"
+                    )
 
                     break
                 case BotCmd.HELLO:
@@ -474,162 +545,177 @@ class Bot(Application):
                     print(f"{Fore.GREEN}{self.get_note_by_title(args)}")
                 case BotCmd.GET_ALL_NOTES:
                     print(f"{self.get_notes(args)}")
+                case BotCmd.ADD_CONTACT_INFO:
+                    print(f"{Fore.GREEN}{self.add_contact_info(args)}")
+                case BotCmd.GET_INFO:
+                    print(f"{Fore.GREEN}{self.get_info(args)}")
+                case BotCmd.SEARCH_INFO:
+                    print(f"{Fore.GREEN}{self.search_info(args)}")
+                case BotCmd.DELETE_INFO:
+                    print(f"{Fore.GREEN}{self.delete_info(args)}")
+                case BotCmd.SHOW_INFO:
+                    print(f"{Fore.GREEN}{self.show_info(args)}")
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
     @data_saver
     @input_error
-    def add_email(self, args):
-        if len(args) != 2:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-email [name] [email]{Style.RESET_ALL}"
-            )
-        name, email = args
-
-        record = self.book.find_contact(name)
-        if record:
-            record.add_email(email)
-            return f"Email for {name} added."
-        else:
-            raise KeyError(
-                f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}"
-            )
-
-    @data_saver
-    @input_error
-    def add_address(self, args):
-        if len(args) < 2:
-            raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
-            )
-        name = args[0]
-        del args[0]
-        address = " ".join(args)
-
-        record = self.book.find_contact(name)
-        if record:
-            record.add_address(address)
-            return f"Address for {name} added."
-        else:
-            raise KeyError(
-                f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}"
-            )
-
-    @input_error
-    def search_by(self, args=None):
+    def get_info(self, args):
         """
-        This function interacts with the user to gather search criteria,
-        and then performs the search based on the provided criteria.
+        This function provides a menu to get different types of contact information.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: message indicating the execution result.
         """
+        print("Choose the information you want to retrieve:")
+        print("1. Get all notes")
+        print("2. Get notes by tag")
+        print("3. Get note by title")
+        choice = input("Enter the number of your choice: ")
 
-        # If args are not provided, interactively gather them
-        if args is None or len(args) != 2:
-            print("Choose a search criterion:")
-            print("1. Search by name")
-            print("2. Search by phone number")
-            print("3. Search by email")
-            print("4. Search by address")
-            print("5. Search by note")
-            print("6. Search by tag")
-            print("7. Search by birthday")
-            print("8. Search by all criteria")
-            criterion_choice = input("Enter the criterion number: ")
-
-            if criterion_choice == "1":
-                field = "name"
-                value = input("Enter the name to search: ")
-            elif criterion_choice == "2":
-                field = "phone"
-                value = input("Enter the phone number to search: ")
-            elif criterion_choice == "3":
-                field = "email"
-                value = input("Enter the email to search: ")
-            elif criterion_choice == "4":
-                field = "address"
-                value = input("Enter the address to search: ")
-            elif criterion_choice == "5":
-                field = "note"
-                value = input("Enter the note text to search: ")
-            elif criterion_choice == "6":
-                field = "tag"
-                value = input("Enter the tag to search: ")
-            elif criterion_choice == "7":
-                field = "birthday"
-                value = input("Enter the birthday (DD.MM.YYYY) to search: ")
-            elif criterion_choice == "8":
-                field = "all"
-                value = input("Enter the keyword to search across all criteria: ")
+        if choice == "1":
+            if len(args) == 0:
+                name = input("Please enter the name of the contact: ")
+            elif len(args) == 1:
+                name = args[0]
             else:
-                print(
-                    f"{Fore.RED}Invalid criterion. Please try again.{Style.RESET_ALL}"
+                raise ValueError(
+                    f"{Fore.RED}Invalid input. Use: get-info [name]{Style.RESET_ALL}"
                 )
-                return
 
-            args = [field, value]
+            return self.get_notes([name])
 
-        # Proceed with the search using the provided or collected args
-        if len(args) != 2:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: search-by [field] [value]{Style.RESET_ALL}"
-            )
+        elif choice == "2":
+            tag = input("Enter the tag to search notes: ")
+            return self.get_notes_by_tag([tag])
 
-        field, value = args
+        elif choice == "3":
+            note_title = input("Enter the note title: ")
+            return self.get_note_by_title([note_title])
 
-        # Assuming AddressBook has a method find_contacts_by_field
-        records = self.book.find_contacts_by_field(field, value)
-
-        if records:
-           return self.build_table_for_records(records)
         else:
-            raise KeyError(
-                f"{Fore.RED}No contacts found for the specified {field}.{Style.RESET_ALL}"
-            )
+            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
 
     @data_saver
     @input_error
-    def add_note(self, args):
+    def search_info(self, args):
         """
-        This function adds a note to a contact.
+        This function provides a menu to search for different types of contact information.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: message indicating the execution result.
         """
-        if len(args) != 1:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-note [author_name] [note_title]{Style.RESET_ALL}"
-            )
-        author_name, *_ = args
+        print("Choose the information you want to search:")
+        print("1. Search by name")
+        print("2. Search by phone number")
+        print("3. Search by email")
+        print("4. Search by address")
+        print("5. Search by note content")
+        print("6. Search by tag")
+        print("7. Search by birthday")
+        choice = input("Enter the number of your choice: ")
 
-        record = self.book.find_contact(author_name)
-        if record:
-            title = input("Enter note title [enter to exit]: ")
-            if not title:
-                return None
+        if choice == "1":
+            if len(args) == 0:
+                name = input("Please enter the name of the contact: ")
+            elif len(args) == 1:
+                name = args[0]
+            else:
+                raise ValueError(
+                    f"{Fore.RED}Invalid input. Use: search-info [name]{Style.RESET_ALL}"
+                )
 
-            note = input("Enter note content: \n")
-            record.add_note(title, note)
+            return self.search_by(["name", name])
 
-            return f"Note for {author_name} added."
+        elif choice == "2":
+            phone = input("Enter the phone number: ")
+            return self.search_by(["phone", phone])
+
+        elif choice == "3":
+            email = input("Enter the email address: ")
+            return self.search_by(["email", email])
+
+        elif choice == "4":
+            address = input("Enter the address: ")
+            return self.search_by(["address", address])
+
+        elif choice == "5":
+            note_content = input("Enter the note content: ")
+            return self.search_by(["note", note_content])
+
+        elif choice == "6":
+            tag = input("Enter the tag: ")
+            return self.search_by(["tag", tag])
+
+        elif choice == "7":
+            birthday = input("Enter the birthday (DD.MM.YYYY): ")
+            return self.search_by(["birthday", birthday])
+
         else:
-            raise KeyError(
-                f"{Fore.RED}Contact {author_name} not found. Please create contact first. {Style.RESET_ALL}"
-            )
+            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
 
     @data_saver
     @input_error
-    def edit_note(self, args):
+    def delete_info(self, args):
         """
-        This function edits a note of a contact.
+        This function provides a menu to delete different types of contact information.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: message indicating the execution result.
         """
-        if len(args) < 1:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: edit-note [note_title]{Style.RESET_ALL}"
-            )
-        note_title = " ".join(args)
+        print("Choose the information you want to delete:")
+        print("1. Delete contact")
+        print("2. Delete phone")
+        print("3. Delete email")
+        print("4. Delete address")
+        print("5. Delete birthday")
+        print("6. Delete note by title")
+        print("7. Delete tag from note")
+        choice = input("Enter the number of your choice: ")
 
-        note = self.book.find_note_by_title(note_title)
-        if note:
-            new_note = input("Enter new note content: \n")
-            note.value = new_note
-            return f"Note {note_title} edited."
+        if len(args) == 0:
+            name = input("Please enter the name of the contact: ")
+        elif len(args) == 1:
+            name = args[0]
         else:
-            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-info [name]{Style.RESET_ALL}"
+            )
+
+        record = self.book.find_contact(name)
+        if not record and choice != "1":
+            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+
+        if choice == "1":
+            return self.delete_contact([name])
+
+        elif choice == "2":
+            phone = input(f"Enter the phone number to delete for {name}: ")
+            return self.delete_contact_phone([name, phone])
+
+        elif choice == "3":
+            return self.delete_contact_info([name, "email"])
+
+        elif choice == "4":
+            return self.delete_contact_info([name, "address"])
+
+        elif choice == "5":
+            return self.delete_contact_info([name, "birthday"])
+
+        elif choice == "6":
+            note_title = input(f"Enter the note title to delete for {name}: ")
+            return self.delete_note_by_title([note_title])
+
+        elif choice == "7":
+            note_title = input(f"Enter the note title to remove tag from for {name}: ")
+            tag = input(f"Enter the tag to remove from the note: ")
+            return self.delete_tag([tag, note_title])
+
+        else:
+            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
 
     @data_saver
     @input_error
@@ -645,27 +731,6 @@ class Bot(Application):
 
         self.book.delete_note_by_title(note_title)
         return f"Note {note_title} deleted."
-
-    @data_saver
-    @input_error
-    def add_tags(self, args):
-        """
-        This function adds tags to a note.
-        """
-        if len(args) < 1:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-tags [note_title]{Style.RESET_ALL}"
-            )
-        note_title = " ".join(args)
-
-        note = self.book.find_note_by_title(note_title)
-        if note:
-            tags = input("Enter tags separated by space: ").split()
-            note.tags = note.tags + tags
-            return f"Tags added to {note_title}."
-        else:
-
-            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
 
     @data_saver
     @input_error
@@ -740,15 +805,11 @@ class Bot(Application):
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-
     def build_table_for_notes(self, notes):
         table_data = [
-            [
-                note.title,
-                ", ".join(str(tag) for tag in note.tags),
-                note.value
-            ] for note in notes
-            ]
+            [note.title, ", ".join(str(tag) for tag in note.tags), note.value]
+            for note in notes
+        ]
 
         headers = ["Title", "Tags", "Note"]
 
@@ -767,19 +828,71 @@ class Bot(Application):
     @data_saver
     @input_error
     def edit_contact_info(self, args):
-        if len(args) < 3:
+        """
+        This function provides a menu to edit different types of contact information.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: message indicating the execution result.
+        """
+        if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: edit-contact-info [name] [field name] [new value]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid input. Use: edit-contact-info [name]{Style.RESET_ALL}"
             )
-        name, field, new_value, *_ = args
+
+        name = args[0]
+        print("Choose the information you want to edit:")
+        print("1. Name")
+        print("2. Phone")
+        print("3. Email")
+        print("4. Address")
+        print("5. Birthday")
+        choice = input("Enter the number of your choice: ")
+
         record = self.book.find_contact(name)
-        method = field.lower()
-        if method == 'name' and record:
-            return self.book.update_name(name, new_value)
-        if record:
-            return getattr(record, f"edit_{method}")(new_value)
+        if not record:
+            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+
+        if choice == "1":
+            new_name = input(f"Enter the new name for {name}: ")
+            record.edit_name(new_name)
+            return f"Name changed to {new_name} for contact {name}."
+
+        elif choice == "2":
+            old_phone = input(f"Enter the current phone number for {name}: ")
+            new_phone = input(f"Enter the new phone number for {name}: ")
+            try:
+                record.edit_phone(old_phone, new_phone)
+                return f"Phone number updated to {new_phone} for {name}."
+            except InvalidPhoneNumberError as e:
+                print(str(e))
+                return "Phone number not updated."
+
+        elif choice == "3":
+            new_email = input(f"Enter the new email address for {name}: ")
+            try:
+                record.edit_email(new_email)
+                return f"Email address updated to {new_email} for {name}."
+            except InvalidEmailError as e:
+                print(str(e))
+                return "Email address not updated."
+
+        elif choice == "4":
+            new_address = input(f"Enter the new address for {name}: ")
+            record.edit_address(new_address)
+            return f"Address updated to {new_address} for {name}."
+
+        elif choice == "5":
+            new_birthday = input(f"Enter the new birthday (DD.MM.YYYY) for {name}: ")
+            try:
+                record.edit_birthday(new_birthday)
+                return f"Birthday updated to {new_birthday} for {name}."
+            except InvalidBirthdayError as e:
+                print(str(e))
+                return "Birthday not updated."
+
         else:
-            return f"Contact with name {name} not found"
+            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
 
     @data_saver
     @input_error
@@ -793,20 +906,6 @@ class Bot(Application):
         method = field.lower()
         if record:
             return getattr(record, f"delete_{method}")()
-        else:
-            return f"Contact with name {name} not found"
-
-    @data_saver
-    @input_error
-    def edit_contact_phone(self, args):
-        if len(args) < 3:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: edit-contact-phone [name] [old phone] [new phone]{Style.RESET_ALL}"
-            )
-        name, old_number, new_number, *_ = args
-        record = self.book.find_contact(name)
-        if record:
-            return record.edit_phone(old_number, new_number)
         else:
             return f"Contact with name {name} not found"
 
