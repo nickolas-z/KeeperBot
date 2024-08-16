@@ -5,7 +5,7 @@ from colorama import Fore, Style, init
 from AddressBook import Record, AddressBook, Birthday
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-
+from functools import wraps
 
 class Bot(Application):
     """
@@ -49,6 +49,7 @@ class Bot(Application):
         return user_input.strip().lower() == "yes"
     
     def data_saver(func):
+        @wraps(func)
         def inner(*args, **kwargs):
             result = func(*args, **kwargs)
             Bot.__save_data(Bot.contacts_info)
