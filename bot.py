@@ -1,5 +1,5 @@
 ﻿import pickle
-
+from tabulate import tabulate
 from colorama import Fore, Style, init
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import PromptSession
@@ -7,21 +7,24 @@ from prompt_toolkit import PromptSession
 from AddressBook import Record, AddressBook, Birthday
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-
+from functools import wraps
 
 class Bot(Application):
     """
     Application class
     """
+    contacts_info = None
 
     def __init__(self, app_name, filename="addressbook.pkl"):
         super().__init__(app_name)
         self.filename = filename
         self.book = Bot.__load_data(self.filename)
+
         self.commands_list = BotCmd.get_all_commands()
         self.command_completer = WordCompleter(
             self.commands_list, ignore_case=True)
         self.session = PromptSession(completer=self.command_completer)
+        Bot.contacts_info = self.book
 
     @staticmethod
     def __parse_input(user_input):
@@ -51,7 +54,17 @@ class Bot(Application):
         print(f"{Fore.YELLOW}{message}")
         user_input = input("Enter 'yes' to confirm: ")
         return user_input.strip().lower() == "yes"
+    
+    def data_saver(func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            result = func(*args, **kwargs)
+            Bot.__save_data(Bot.contacts_info)
 
+            return result
+        return inner  
+
+    @data_saver
     @input_error
     def add_contact(self, args):
         """
@@ -89,6 +102,7 @@ class Bot(Application):
             record.add_phone(phone)
         return message
 
+    @data_saver
     @input_error
     def change_contact(self, args):
         """
@@ -118,12 +132,25 @@ class Bot(Application):
             str: list of contacts.
         """
         if not self.book.data:
-            return "No contacts found."
+            print("No contacts found.")
+            
+             
+        table_data = [
+            [
+                record.name,
+                ", ".join(str(phone) for phone in record.phones),
+                record.email,
+                record.birthday,
+                record.address,
+                ", ".join(note.title for note in record.notes),
+                ", ".join(", ".join(str(tag) for tag in note.tags) for note in record.notes),
+                "+" if record.owner else "",
+                ] for name, record in self.book.data.items()
+            ]
 
-        result = ""
-        for name, record in self.book.data.items():
-            result += f"\n{str(record)}"
-        return result.strip()
+        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
+
+        return tabulate(table_data, headers, tablefmt="fancy_grid")
 
     @input_error
     def show_phone(self, args):
@@ -149,6 +176,7 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}Contact {
                            name} not found.{Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def add_birthday(self, args):
         """
@@ -216,13 +244,19 @@ class Bot(Application):
             )
 
         if not upcoming_birthdays:
-            return f"No upcoming birthdays."
+            print(f"No upcoming birthdays.")
+            return
+        
+        table_data = [[record.name, record.birthday ] for record in upcoming_birthdays]
 
-        result = "Upcoming birthdays:\n"
-        for record in upcoming_birthdays:
-            result += f"{record.name}: {record.birthday}\n"
+        headers = ["Name", "Birthday"]
+        print(f"{Fore.GREEN}Upcoming birthdays:{Style.RESET_ALL}")
+
 
         return result.strip()
+
+        print(tabulate(table_data, headers, tablefmt="fancy_grid"))  
+
 
     @staticmethod
     def __save_data(book, filename="addressbook.pkl"):
@@ -337,12 +371,45 @@ class Bot(Application):
                 Fore.GREEN}exit {Fore.WHITE}- close the program."
         )
 
+    @data_saver
+    @input_error
+    def add_owner(self):
+        print("Let's start by recording your personal details.", end="\n\n")
+
+        res = input(f"Record your data: {Fore.GREEN}Yes{Style.RESET_ALL}/{Fore.RED}No{Style.RESET_ALL} ")
+
+        if res.lower() == "Yes".lower():                
+            name = input("Your name: ")
+            
+            record = Record(name)
+            record.check_owner()
+                
+            self.book.add_record(record)
+        
+            telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
+                    
+            try:
+                record.add_phone(telephone)
+            except ValueError as e:
+                print(Fore.RED + str(e))
+                    
+            if record.name and record.phones:
+                print(f"{Fore.GREEN}{record.name} - {record.phones[0]} ")
+
+    @data_saver
     @print_execution_time
     def run(self):
         init(autoreset=True)
+        owner = self.book.get_owner()
+        
+        if owner is None:
+            self.add_owner()
+        else:
+            print(f"{Fore.MAGENTA}Glad to see you, {owner.name}!{Style.RESET_ALL}", end="\n\n")
+
         Bot.__show_help()
         print(f"Address book has {len(self.book.data)} contact(s).")
-
+        
         while True:
             user_input = self.session.prompt("Enter a command: ")
             parsed_input = Bot.__parse_input(user_input)
@@ -355,7 +422,8 @@ class Bot(Application):
 
             match command:
                 case BotCmd.CLOSE | BotCmd.EXIT:
-                    print(f"{Fore.YELLOW}Good bye!")
+                    print(f"{Fore.YELLOW}Good bye{' ' + str(owner.name) if owner else ''}!{Style.RESET_ALL}")
+
                     break
                 case BotCmd.HELLO:
                     print(f"{Fore.GREEN}How can I help you?")
@@ -366,9 +434,9 @@ class Bot(Application):
                 case BotCmd.CONTACT_SHOW_PHONES:
                     print(f"{Fore.CYAN}{self.show_phone(args)}")
                 case BotCmd.CONTACT_SHOW_ALL:
-                    print(f"{Fore.MAGENTA}{self.show_all()}")
+                    print(self.show_all())
                 case BotCmd.BIRTHDAY_ADD:
-                    print(f"{Fore.GREEN}{self.add_birthday(args)}")
+                    self.add_birthday(args)
                 case BotCmd.BIRTHDAY_SHOW:
                     print(f"{Fore.CYAN}{self.show_birthday(args)}")
                 case BotCmd.BIRTHDAY_SHOW_ALL:
@@ -400,16 +468,15 @@ class Bot(Application):
                 case BotCmd.DELETE_TAG:
                     print(f"{Fore.GREEN}{self.delete_tag(args)}")
                 case BotCmd.GET_NOTES_BY_TAG:
-                    print(f"{Fore.GREEN}{self.get_notes_by_tag(args)}")
+                    print(f"{self.get_notes_by_tag(args)}")
                 case BotCmd.GET_NOTE_BY_TITLE:
                     print(f"{Fore.GREEN}{self.get_note_by_title(args)}")
                 case BotCmd.GET_ALL_NOTES:
-                    print(f"{Fore.GREEN}{self.get_notes(args)}")
+                    print(f"{self.get_notes(args)}")
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
-            Bot.__save_data(self.book)
-
+    @data_saver
     @input_error
     def add_email(self, args):
         if len(args) != 2:
@@ -427,6 +494,7 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}Contact {
                            name} not found. Please create contact first. {Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def add_address(self, args):
         if len(args) != 2:
@@ -517,6 +585,7 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}No contacts found for the specified {
                            field}.{Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def add_note(self, args):
         """
@@ -543,6 +612,7 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}Contact {
                            author_name} not found. Please create contact first. {Style.RESET_ALL}")
 
+    @data_saver 
     @input_error
     def edit_note(self, args):
         """
@@ -564,6 +634,7 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}Note {
                            note_title} not found. {Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def delete_note(self, args):
         """
@@ -579,6 +650,8 @@ class Bot(Application):
         self.book.delete_note_by_title(note_title)
         return f"Note {note_title} deleted."
 
+
+    @data_saver
     @input_error
     def add_tags(self, args):
         """
@@ -597,9 +670,11 @@ class Bot(Application):
             note.tags = note.tags + tags
             return f"Tags added to {note_title}."
         else:
+
             raise KeyError(f"{Fore.RED}Note {
                            note_title} not found. {Style.RESET_ALL}")
 
+    @data_saver
     @input_error
     def delete_tag(self, args):
         """
@@ -626,6 +701,7 @@ class Bot(Application):
         """
         This function finds all notes with specified tag.
         """
+
         if len(args) != 1:
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: get-notes-by-tag [tag]{
@@ -674,14 +750,27 @@ class Bot(Application):
         name, *_ = args
 
         record = self.book.find_contact(name)
+        
         if record:
-            result = ""
-            for note in record.notes:
-                result += f"\n{str(note)}"
-            return result.strip()
+            return self.build_table_for_notes(record)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
+                
+    def build_table_for_notes(self, record):
+        table_data = [
+            [
+                note.title,
+                ", ".join(str(tag) for tag in note.tags),
+                note.value
+                ] for note in record.notes
+            ]
+
+        headers = ["Title","Tags", "Note"]
+
+        return tabulate(table_data, headers, tablefmt="fancy_grid")
+    
+    @data_saver    
     @input_error
     def delete_contact(self, args):
         name, *_ = args
@@ -691,6 +780,8 @@ class Bot(Application):
         else:
             return f'Contact with name {name} not found'
 
+
+    @data_saver
     @input_error
     def edit_contact_info(self, args):
         if len(args) < 3:
@@ -706,6 +797,8 @@ class Bot(Application):
         else:
             return f'Contact with name {name} not found'
 
+
+    @data_saver
     @input_error
     def delete_contact_info(self, args):
         if len(args) < 2:
@@ -721,6 +814,7 @@ class Bot(Application):
         else:
             return f'Contact with name {name} not found'
 
+    @data_saver
     @input_error
     def edit_contact_phone(self, args):
         if len(args) < 3:
@@ -735,6 +829,7 @@ class Bot(Application):
         else:
             return f'Contact with name {name} not found'
 
+    @data_saver
     @input_error
     def delete_contact_phone(self, args):
         if len(args) < 2:
