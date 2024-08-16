@@ -109,7 +109,8 @@ class Bot(Application):
         """
         if not self.book.data:
             print("No contacts found.")
-        
+            
+             
         table_data = [
             [
                 record.name,
@@ -117,13 +118,15 @@ class Bot(Application):
                 record.email,
                 record.birthday,
                 record.address,
-                "+" if record.owner else ""
+                ", ".join(note.title for note in record.notes),
+                ", ".join(", ".join(str(tag) for tag in note.tags) for note in record.notes),
+                "+" if record.owner else "",
                 ] for name, record in self.book.data.items()
             ]
 
-        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Owner"]
+        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
 
-        print(tabulate(table_data, headers, tablefmt="fancy_grid"))
+        return tabulate(table_data, headers, tablefmt="fancy_grid")
 
     @input_error
     def show_phone(self, args):
@@ -383,7 +386,7 @@ class Bot(Application):
                 case BotCmd.CONTACT_SHOW_PHONES:
                     print(f"{Fore.CYAN}{self.show_phone(args)}")
                 case BotCmd.CONTACT_SHOW_ALL:
-                    self.show_all()
+                    print(self.show_all())
                 case BotCmd.BIRTHDAY_ADD:
                     self.add_birthday(args)
                 case BotCmd.BIRTHDAY_SHOW:
@@ -417,11 +420,11 @@ class Bot(Application):
                 case BotCmd.DELETE_TAG:
                     print(f"{Fore.GREEN}{self.delete_tag(args)}")
                 case BotCmd.GET_NOTES_BY_TAG:
-                    print(f"{Fore.GREEN}{self.get_notes_by_tag(args)}")
+                    print(f"{self.get_notes_by_tag(args)}")
                 case BotCmd.GET_NOTE_BY_TITLE:
                     print(f"{Fore.GREEN}{self.get_note_by_title(args)}")
                 case BotCmd.GET_ALL_NOTES:
-                    print(f"{Fore.GREEN}{self.get_notes(args)}")
+                    print(f"{self.get_notes(args)}")
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
@@ -575,6 +578,7 @@ class Bot(Application):
         """
         This function finds all notes with specified tag.
         """
+
         if len(args) != 1:
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: get-notes-by-tag [tag]{Style.RESET_ALL}"
@@ -583,6 +587,7 @@ class Bot(Application):
 
         notes = self.book.find_notes_by_tag(tag)
         if notes:
+            # return self.build_table_for_notes(notes)
             result = ""
             for note in notes:
                 result += f"\n{str(note)}"
@@ -619,13 +624,24 @@ class Bot(Application):
         name, *_ = args
 
         record = self.book.find_contact(name)
+        
         if record:
-            result = ""
-            for note in record.notes:
-                result += f"\n{str(note)}"
-            return result.strip()
+            return self.build_table_for_notes(record)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
+        
+    def build_table_for_notes(self, record):
+        table_data = [
+            [
+                note.title,
+                ", ".join(str(tag) for tag in note.tags),
+                note.value
+                ] for note in record.notes
+            ]
+
+        headers = ["Title","Tags", "Note"]
+
+        return tabulate(table_data, headers, tablefmt="fancy_grid")
             
     @input_error
     def delete_contact(self, args):
