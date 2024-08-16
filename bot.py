@@ -174,7 +174,6 @@ class Bot(Application):
         return tabulate(table_data, headers, tablefmt="fancy_grid")
 
     @input_error
-    @input_error
     def show_phone(self, args):
         """This function displays the phone number of a contact.
         Args:
