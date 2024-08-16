@@ -174,6 +174,7 @@ class Bot(Application):
         return tabulate(table_data, headers, tablefmt="fancy_grid")
 
     @input_error
+    @input_error
     def show_phone(self, args):
         """This function displays the phone number of a contact.
         Args:
@@ -185,19 +186,20 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: phone [name]{Style.RESET_ALL}"
             )
+
         name = args[0]
         record = self.book.find_contact(name)
+
         if record:
             phones = [phone.value for phone in record.phones]
-            if len(phones) == 1:
-                return f"{name}: {phones[0]}."
+            if phones:
+                table_data = [[name, phone] for phone in phones]
+                headers = ["Name", "Phone Number"]
+                print(tabulate(table_data, headers, tablefmt="fancy_grid"))
             else:
-                return f"{name}: {'; '.join(phones)}."
+                return f"{Fore.RED}No phone numbers found for {name}.{Style.RESET_ALL}"
         else:
-            raise KeyError(
-                f"{Fore.RED}Contact {
-                           name} not found.{Style.RESET_ALL}"
-            )
+            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
     @data_saver
     @input_error
