@@ -124,10 +124,9 @@ class Bot(Application):
 
         if record:
             try:
-                valid_phone = Phone(new_phone)
                 record.edit_phone(old_phone, new_phone)
                 return f"Contact {name} updated."
-            except ValueError as e: 
+            except ValueError as e:
                 return f"{Fore.RED}Failed to update contact: {str(e)}{Style.RESET_ALL}"
         else:
             raise KeyError(f"{Fore.RED}Contact {
