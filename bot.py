@@ -9,6 +9,7 @@ from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
 from functools import wraps
 
+
 class Bot(Application):
     """
     Application class
@@ -54,7 +55,8 @@ class Bot(Application):
         print(f"{Fore.YELLOW}{message}")
         user_input = input("Enter 'yes' to confirm: ")
         return user_input.strip().lower() == "yes"
-    
+
+    @staticmethod
     def data_saver(func):
         @wraps(func)
         def inner(*args, **kwargs):
@@ -62,7 +64,8 @@ class Bot(Application):
             Bot.__save_data(Bot.contacts_info)
 
             return result
-        return inner  
+
+        return inner
 
     @data_saver
     @input_error
@@ -130,8 +133,7 @@ class Bot(Application):
         """
         if not self.book.data:
             print("No contacts found.")
-            
-             
+
         table_data = [
             [
                 record.name,
@@ -142,8 +144,8 @@ class Bot(Application):
                 ", ".join(note.title for note in record.notes),
                 ", ".join(", ".join(str(tag) for tag in note.tags) for note in record.notes),
                 "+" if record.owner else "",
-                ] for name, record in self.book.data.items()
-            ]
+            ] for name, record in self.book.data.items()
+        ]
 
         headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
 
@@ -237,17 +239,12 @@ class Bot(Application):
         if not upcoming_birthdays:
             print(f"No upcoming birthdays.")
             return
-        
-        table_data = [[record.name, record.birthday ] for record in upcoming_birthdays]
+
+        table_data = [[record.name, record.birthday] for record in upcoming_birthdays]
 
         headers = ["Name", "Birthday"]
         print(f"{Fore.GREEN}Upcoming birthdays:{Style.RESET_ALL}")
-
-
-        return result.strip()
-
-        print(tabulate(table_data, headers, tablefmt="fancy_grid"))  
-
+        print(tabulate(table_data, headers, tablefmt="fancy_grid"))
 
     @staticmethod
     def __save_data(book, filename="addressbook.pkl"):
@@ -326,10 +323,12 @@ class Bot(Application):
             f"- show the birthday for the specified contact;"
         )
         print(
-            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} - show birthdays that will occur within the next number of days, empty for today;"
+            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} "
+            f"- show birthdays that will occur within the next number of days, empty for today;"
         )
         print(
-            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
+            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] "
+            f"[available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
         )
         print(
             f"{Fore.GREEN}\tedit-contact-phone {Fore.YELLOW}[name] [old phone] [new phone] {Fore.WHITE}- update contact phone;"
@@ -338,7 +337,8 @@ class Bot(Application):
             f"{Fore.GREEN}\tdelete-contact-phone {Fore.YELLOW}[name] [phone number] {Fore.WHITE}- delete contact phone;"
         )
         print(
-            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
+            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] "
+            f"[available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
         )
         print(
             f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;")
@@ -358,30 +358,34 @@ class Bot(Application):
 
         res = input(f"Record your data: {Fore.GREEN}Yes{Style.RESET_ALL}/{Fore.RED}No{Style.RESET_ALL} ")
 
-        if res.lower() == "Yes".lower():                
+        if res.lower() == "Yes".lower():
             name = input("Your name: ")
-            
+
             record = Record(name)
             record.check_owner()
-                
+
             self.book.add_record(record)
-        
-            telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
-                    
-            try:
-                record.add_phone(telephone)
-            except ValueError as e:
-                print(Fore.RED + str(e))
-                    
-            if record.name and record.phones:
-                print(f"{Fore.GREEN}{record.name} - {record.phones[0]} ")
+
+            def add_owner_phone():
+                telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
+
+                try:
+                    record.add_phone(telephone)
+                except ValueError as e:
+                    print(Fore.RED + str(e))
+                    return add_owner_phone()
+
+                if record.name and record.phones:
+                    return f"{Fore.GREEN}{record.name} - {record.phones[0]} "
+
+            print(add_owner_phone())
 
     @data_saver
     @print_execution_time
     def run(self):
         init(autoreset=True)
         owner = self.book.get_owner()
-        
+
         if owner is None:
             self.add_owner()
         else:
@@ -389,7 +393,7 @@ class Bot(Application):
 
         Bot.__show_help()
         print(f"Address book has {len(self.book.data)} contact(s).")
-        
+
         while True:
             user_input = self.session.prompt("Enter a command: ")
             parsed_input = Bot.__parse_input(user_input)
@@ -477,7 +481,7 @@ class Bot(Application):
     def add_address(self, args):
         if len(args) != 2:
             raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
-            )
+                             )
         name, address = args
 
         record = self.book.find_contact(name)
@@ -582,7 +586,7 @@ class Bot(Application):
         else:
             raise KeyError(f"{Fore.RED}Contact {author_name} not found. Please create contact first. {Style.RESET_ALL}")
 
-    @data_saver 
+    @data_saver
     @input_error
     def edit_note(self, args):
         """
@@ -616,7 +620,6 @@ class Bot(Application):
 
         self.book.delete_note_by_title(note_title)
         return f"Note {note_title} deleted."
-
 
     @data_saver
     @input_error
@@ -709,27 +712,26 @@ class Bot(Application):
         name, *_ = args
 
         record = self.book.find_contact(name)
-        
+
         if record:
             return self.build_table_for_notes(record)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-                
     def build_table_for_notes(self, record):
         table_data = [
             [
                 note.title,
                 ", ".join(str(tag) for tag in note.tags),
                 note.value
-                ] for note in record.notes
-            ]
+            ] for note in record.notes
+        ]
 
-        headers = ["Title","Tags", "Note"]
+        headers = ["Title", "Tags", "Note"]
 
         return tabulate(table_data, headers, tablefmt="fancy_grid")
-    
-    @data_saver    
+
+    @data_saver
     @input_error
     def delete_contact(self, args):
         name, *_ = args
@@ -738,7 +740,6 @@ class Bot(Application):
             return self.book.delete(name)
         else:
             return f'Contact with name {name} not found'
-
 
     @data_saver
     @input_error
@@ -754,7 +755,6 @@ class Bot(Application):
             return getattr(record, f"edit_{method}")(new_value)
         else:
             return f'Contact with name {name} not found'
-
 
     @data_saver
     @input_error
