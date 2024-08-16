@@ -1,13 +1,15 @@
 ﻿import pickle
-from tabulate import tabulate
+from functools import wraps
+
 from colorama import Fore, Style, init
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from tabulate import tabulate
 
 from AddressBook import Record, AddressBook, Birthday
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-from functools import wraps
+
 
 class Bot(Application):
     """
@@ -128,10 +130,11 @@ class Bot(Application):
         Return:
             str: list of contacts.
         """
-        if not self.book.data:
-            print("No contacts found.")
-            
-             
+        return self.build_table_for_records(self.book.values())
+
+    def build_table_for_records(self, records):
+        if not records:
+            return "No contacts found."
         table_data = [
             [
                 record.name,
@@ -142,8 +145,8 @@ class Bot(Application):
                 ", ".join(note.title for note in record.notes),
                 ", ".join(", ".join(str(tag) for tag in note.tags) for note in record.notes),
                 "+" if record.owner else "",
-                ] for name, record in self.book.data.items()
-            ]
+            ] for record in records
+        ]
 
         headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
 
@@ -550,10 +553,7 @@ class Bot(Application):
         records = self.book.find_contacts_by_field(field, value)
 
         if records:
-            result = ""
-            for record in records:
-                result += f"\n{str(record)}"
-            return result.strip()
+           return self.build_table_for_records(records)
         else:
             raise KeyError(f"{Fore.RED}No contacts found for the specified {field}.{Style.RESET_ALL}")
 
@@ -673,10 +673,7 @@ class Bot(Application):
 
         notes = self.book.find_notes_by_tag(tag)
         if notes:
-            result = ""
-            for note in notes:
-                result += f"\n{str(note)}"
-            return result.strip()
+            return self.build_table_for_notes(notes)
         else:
             raise KeyError(f"{Fore.RED}Notes not found. {Style.RESET_ALL}")
 
@@ -711,18 +708,17 @@ class Bot(Application):
         record = self.book.find_contact(name)
         
         if record:
-            return self.build_table_for_notes(record)
+            return self.build_table_for_notes(record.notes)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-                
-    def build_table_for_notes(self, record):
+    def build_table_for_notes(self, notes):
         table_data = [
             [
                 note.title,
                 ", ".join(str(tag) for tag in note.tags),
                 note.value
-                ] for note in record.notes
+            ] for note in notes
             ]
 
         headers = ["Title","Tags", "Note"]

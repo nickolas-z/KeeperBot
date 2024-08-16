@@ -174,8 +174,10 @@ class AddressBook(UserDict):
         """
         result = []
         for record in self.data.values():
-            if record.note and tag in record.note.tags:
-                result.append(record.note)
+            if record.notes:
+                for note in record.notes:
+                    if tag in note.tags:
+                        result.append(note)
         return result
 
 
