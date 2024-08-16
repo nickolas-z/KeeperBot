@@ -1,20 +1,21 @@
 ﻿import pickle
-from tabulate import tabulate
+from functools import wraps
+
 from colorama import Fore, Style, init
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from tabulate import tabulate
 
 from AddressBook import Record, AddressBook, Birthday
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-from functools import wraps
+
 
 
 class Bot(Application):
     """
     Application class
     """
-
     contacts_info = None
 
     def __init__(self, app_name, filename="addressbook.pkl"):
@@ -112,8 +113,13 @@ class Bot(Application):
         Return:
             str: list of contacts.
         """
-        if not self.book.data:
-            print("No contacts found.")
+        if self.book.data:
+            self.book.data = dict(sorted(self.book.data.items()))
+        return self.build_table_for_records(self.book.values())
+
+    def build_table_for_records(self, records):
+        if not records:
+            return "No contacts found."
 
         table_data = [
             [
@@ -127,20 +133,10 @@ class Bot(Application):
                     ", ".join(str(tag) for tag in note.tags) for note in record.notes
                 ),
                 "+" if record.owner else "",
-            ]
-            for name, record in self.book.data.items()
+            ] for record in records
         ]
 
-        headers = [
-            "Name",
-            "Phone",
-            "Email",
-            "Birthday",
-            "Address",
-            "Notes",
-            "Tag",
-            "Owner",
-        ]
+        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
 
         return tabulate(table_data, headers, tablefmt="fancy_grid")
 
@@ -448,6 +444,8 @@ class Bot(Application):
                     self.__show_help()
                 case BotCmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
+                case BotCmd.ADD_ADDRESS:
+                    print(f"{Fore.GREEN}{self.add_address(args)}")
                 case BotCmd.EDIT:
                     print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
                 case BotCmd.EDIT_CONTACT_PHONE:
@@ -500,11 +498,12 @@ class Bot(Application):
     @data_saver
     @input_error
     def add_address(self, args):
-        if len(args) != 2:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
+        if len(args) < 2:
+            raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
             )
-        name, address = args
+        name = args[0]
+        del args[0]
+        address = " ".join(args)
 
         record = self.book.find_contact(name)
         if record:
@@ -579,10 +578,7 @@ class Bot(Application):
         records = self.book.find_contacts_by_field(field, value)
 
         if records:
-            result = ""
-            for record in records:
-                result += f"\n{str(record)}"
-            return result.strip()
+           return self.build_table_for_records(records)
         else:
             raise KeyError(
                 f"{Fore.RED}No contacts found for the specified {field}.{Style.RESET_ALL}"
@@ -705,10 +701,7 @@ class Bot(Application):
 
         notes = self.book.find_notes_by_tag(tag)
         if notes:
-            result = ""
-            for note in notes:
-                result += f"\n{str(note)}"
-            return result.strip()
+            return self.build_table_for_notes(notes)
         else:
             raise KeyError(f"{Fore.RED}Notes not found. {Style.RESET_ALL}")
 
@@ -743,15 +736,19 @@ class Bot(Application):
         record = self.book.find_contact(name)
 
         if record:
-            return self.build_table_for_notes(record)
+            return self.build_table_for_notes(record.notes)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-    def build_table_for_notes(self, record):
+
+    def build_table_for_notes(self, notes):
         table_data = [
-            [note.title, ", ".join(str(tag) for tag in note.tags), note.value]
-            for note in record.notes
-        ]
+            [
+                note.title,
+                ", ".join(str(tag) for tag in note.tags),
+                note.value
+            ] for note in notes
+            ]
 
         headers = ["Title", "Tags", "Note"]
 
@@ -777,6 +774,8 @@ class Bot(Application):
         name, field, new_value, *_ = args
         record = self.book.find_contact(name)
         method = field.lower()
+        if method == 'name' and record:
+            return self.book.update_name(name, new_value)
         if record:
             return getattr(record, f"edit_{method}")(new_value)
         else:
