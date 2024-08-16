@@ -178,6 +178,11 @@ class AddressBook(UserDict):
                 result.append(record.note)
         return result
 
+    def update_name(self, name, new_name):
+        self.data[new_name] = self.data.pop(name)
+        return self.data[new_name].edit_name(new_name)
+
+
 
 if __name__ == "__main__":
     field = AddressBook("example value")

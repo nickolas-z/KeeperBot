@@ -134,6 +134,7 @@ class Bot(Application):
         if not self.book.data:
             print("No contacts found.")
 
+        self.book.data = dict(sorted(self.book.data.items()))
         table_data = [
             [
                 record.name,
@@ -751,6 +752,8 @@ class Bot(Application):
         name, field, new_value, *_ = args
         record = self.book.find_contact(name)
         method = field.lower()
+        if method == 'name' and record:
+            return self.book.update_name(name, new_value)
         if record:
             return getattr(record, f"edit_{method}")(new_value)
         else:
