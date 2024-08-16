@@ -130,6 +130,8 @@ class Bot(Application):
         Return:
             str: list of contacts.
         """
+        if self.book.data:
+            self.book.data = dict(sorted(self.book.data.items()))
         return self.build_table_for_records(self.book.values())
 
     def build_table_for_records(self, records):
@@ -746,6 +748,8 @@ class Bot(Application):
         name, field, new_value, *_ = args
         record = self.book.find_contact(name)
         method = field.lower()
+        if method == 'name' and record:
+            return self.book.update_name(name, new_value)
         if record:
             return getattr(record, f"edit_{method}")(new_value)
         else:
