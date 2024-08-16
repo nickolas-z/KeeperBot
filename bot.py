@@ -430,6 +430,8 @@ class Bot(Application):
                     self.__show_help()
                 case BotCmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
+                case BotCmd.ADD_ADDRESS:
+                    print(f"{Fore.GREEN}{self.add_address(args)}")
                 case BotCmd.EDIT:
                     print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
                 case BotCmd.EDIT_CONTACT_PHONE:
@@ -480,10 +482,12 @@ class Bot(Application):
     @data_saver
     @input_error
     def add_address(self, args):
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
             )
-        name, address = args
+        name = args[0]
+        del args[0]
+        address = " ".join(args)
 
         record = self.book.find_contact(name)
         if record:
