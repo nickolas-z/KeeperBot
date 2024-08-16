@@ -267,6 +267,23 @@ class Bot(Application):
               f"- add/replace an email for the specified contact;")
         print(f"{Fore.GREEN}\tadd-address {Fore.YELLOW}[name] [address]{Fore.WHITE} "
               f"- add/replace an address for the specified contact;")
+        print(f"{Fore.GREEN}\tadd-note {Fore.YELLOW}[author_name]{Fore.WHITE} "
+              f"- add note for the specified contact;")
+        print(f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
+              f"- edit note by title;")
+        print(f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
+              f"- delete note by title;")
+        print(f"{Fore.GREEN}\tadd-tags {Fore.YELLOW}[note_title]{Fore.WHITE} "
+              f"- add tags to note;")
+        print(f"{Fore.GREEN}\tdelete-tag {Fore.YELLOW}[tag] [note_title]{Fore.WHITE} "
+              f"- delete specified tag for specified note;")
+        print(f"{Fore.GREEN}\tget-notes-by-tag {Fore.YELLOW}[tag]{Fore.WHITE} "
+              f"- finds all notes with specified tag;")
+        print(f"{Fore.GREEN}\tget-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
+              f"- finds note with specified title;")
+        print(f"{Fore.GREEN}\tget-notes {Fore.YELLOW}[name]{Fore.WHITE} "
+              f"- returns all notes for specified contact;")
+
         print(
             f"{Fore.GREEN}\tphone {Fore.YELLOW}[name]{Fore.WHITE} - show phone numbers for the specified contact;"
         )
@@ -389,6 +406,22 @@ class Bot(Application):
                     print(f"{Fore.MAGENTA}{self.delete_contact(args)}")
                 case BotCmd.SEARCH_BY:
                     print(f"{Fore.GREEN}{self.search_by(args)}") 
+                case BotCmd.ADD_NOTE:
+                    print(f"{Fore.GREEN}{self.add_note(args)}")
+                case BotCmd.EDIT_NOTE:
+                    print(f"{Fore.GREEN}{self.edit_note(args)}")
+                case BotCmd.DELETE_NOTE:
+                    print(f"{Fore.GREEN}{self.delete_note(args)}")
+                case BotCmd.ADD_TAG:
+                    print(f"{Fore.GREEN}{self.add_tags(args)}")
+                case BotCmd.DELETE_TAG:
+                    print(f"{Fore.GREEN}{self.delete_tag(args)}")
+                case BotCmd.GET_NOTES_BY_TAG:
+                    print(f"{Fore.GREEN}{self.get_notes_by_tag(args)}")
+                case BotCmd.GET_NOTE_BY_TITLE:
+                    print(f"{Fore.GREEN}{self.get_note_by_title(args)}")
+                case BotCmd.GET_ALL_NOTES:
+                    print(f"{Fore.GREEN}{self.get_notes(args)}")
                 case _:
                     print(f"{Fore.RED}Invalid command.")
 
@@ -441,7 +474,159 @@ class Bot(Application):
             return result.strip()
         else: 
             raise KeyError(f"{Fore.RED}Contacts not found. {Style.RESET_ALL}")
+
+    @input_error
+    def add_note(self, args):
+        """
+        This function adds a note to a contact.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: add-note [author_name] [note_title]{Style.RESET_ALL}"
+            )
+        author_name, *_ = args
+
+        record = self.book.find_contact(author_name)
+        if record:
+            title = input("Enter note title [enter to exit]: ")
+            if not title:
+                return None
+            
+            note = input("Enter note content: \n")
+            record.add_note(title, note)
+            
+            return f"Note for {author_name} added."
+        else:
+            raise KeyError(f"{Fore.RED}Contact {author_name} not found. Please create contact first. {Style.RESET_ALL}")
         
+    @input_error
+    def edit_note(self, args):
+        """
+        This function edits a note of a contact.
+        """
+        if len(args) < 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: edit-note [note_title]{Style.RESET_ALL}"
+            )
+        note_title = " ".join(args)
+
+        note = self.book.find_note_by_title(note_title)
+        if note:
+            new_note = input("Enter new note content: \n")
+            note.value = new_note
+            return f"Note {note_title} edited."
+        else:
+            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+
+    @input_error
+    def delete_note(self, args):
+        """
+        This function deletes a note of a contact.
+        """
+        if len(args) < 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-note [note_title]{Style.RESET_ALL}"
+            )
+        note_title = ' '.join(args)
+
+        self.book.delete_note_by_title(note_title)
+        return f"Note {note_title} deleted."
+    
+    @input_error
+    def add_tags(self, args):
+        """
+        This function adds tags to a note.
+        """
+        if len(args) < 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: add-tags [note_title]{Style.RESET_ALL}"
+            )
+        note_title = " ".join(args)
+
+        note = self.book.find_note_by_title(note_title)
+        if note:
+            tags = input("Enter tags separated by space: ").split()
+            note.tags = note.tags + tags
+            return f"Tags added to {note_title}."
+        else:
+            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+        
+    @input_error
+    def delete_tag(self, args):
+        """
+        This function deletes a tag from a note.
+        """
+        if len(args) < 2:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-tag [tag] [note_title]{Style.RESET_ALL}"
+            )
+        tag, *note_title = args
+        note_title = " ".join(note_title)
+
+        note = self.book.find_note_by_title(note_title)
+        if note:
+            note.tags.remove(Tag(tag))
+            return f"Tag {tag} deleted from {note_title}."
+        else:
+            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+        
+    @input_error
+    def get_notes_by_tag(self, args):
+        """
+        This function finds all notes with specified tag.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: get-notes-by-tag [tag]{Style.RESET_ALL}"
+            )
+        tag, *_ = args
+
+        notes = self.book.find_notes_by_tag(tag)
+        if notes:
+            result = ""
+            for note in notes:
+                result += f"\n{str(note)}"
+            return result.strip()
+        else:
+            raise KeyError(f"{Fore.RED}Notes not found. {Style.RESET_ALL}")
+        
+    @input_error
+    def get_note_by_title(self, args):
+        """
+        This function finds note by title.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: get-note [note_title]{Style.RESET_ALL}"
+            )
+        note_title = " ".join(args)
+
+        note = self.book.find_note_by_title(note_title)
+        if note:
+            return str(note)
+        else:
+            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+        
+    @input_error
+    def get_notes(self, args):
+        """
+        This function finds all notes for specified contact.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: get-notes [name]{Style.RESET_ALL}"
+            )
+        name, *_ = args
+
+        record = self.book.find_contact(name)
+        if record:
+            result = ""
+            for note in record.notes:
+                result += f"\n{str(note)}"
+            return result.strip()
+        else:
+            raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
+            
     @input_error
     def delete_contact(self, args):
         name, *_ = args
@@ -506,4 +691,3 @@ class Bot(Application):
             return record.remove_phone(number)
         else: 
             return f'Contact with name {name} not found'
-

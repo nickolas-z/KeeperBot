@@ -1,5 +1,7 @@
 from collections import UserDict
 from datetime import datetime, date, timedelta
+
+from AddressBook import Note
 from .record import Record
 from .birthday import Birthday
 from typing import Union
@@ -130,6 +132,51 @@ class AddressBook(UserDict):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(value='{self.value}')"
+
+    def find_note_by_title(self, note_title) -> Union[Note, None]:
+        """Find a note by title.
+
+        Args:
+            note_title (str): The title to search for.
+
+        Returns:
+            Record: The found record, or None if not found.
+        """
+        for record in self.data.values():
+            for note in record.notes:
+                if note.title == note_title:
+                    return note
+        return None
+
+    def delete_note_by_title(self, note_title):
+        """Delete a note by title.
+
+        Args:
+            note_title (str): The title of the note to delete.
+
+        Raises:
+            ValueError: If the note is not found or the title is invalid.
+        """
+        for record in self.data.values():
+            for note in record.notes:
+                if note.title == note_title:
+                    record.notes.remove(note)
+                    return
+
+    def find_notes_by_tag(self, tag):
+        """Find notes by tag.
+
+        Args:
+            tag (str): The tag to search for.
+
+        Returns:
+            list: The found notes.
+        """
+        result = []
+        for record in self.data.values():
+            if record.note and tag in record.note.tags:
+                result.append(record.note)
+        return result
 
 
 if __name__ == "__main__":
