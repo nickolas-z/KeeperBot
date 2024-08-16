@@ -221,7 +221,6 @@ class Bot(Application):
                 f"{Fore.RED}Invalid input. Use: show-birthday [name]{
                     Style.RESET_ALL}"
             )
-
         name = args[0]
 
         record = self.book.find_contact(name)
