@@ -18,14 +18,7 @@ class Bot(Application):
         super().__init__(app_name)
         self.filename = filename
         self.book = Bot.__load_data(self.filename)
-        self.commands_list = [
-            'add', 'change', 'add-email', 'add-note', 'edit-note',
-            'delete-note', 'add-tags', 'delete-tag', 'get-notes-by-tag', 'get-note', 'get-notes',
-            'phone', 'add-birthday', 'all', 'show-birthday', 'show-birthdays',
-            'edit-contact-info', 'delete-contact-phone', 'delete-contact-info',
-            'delete-contact', 'hello', 'search-by', 'close',
-            'exit '
-        ]
+        self.commands_list = BotCmd.get_all_commands()
         self.command_completer = WordCompleter(
             self.commands_list, ignore_case=True)
         self.session = PromptSession(completer=self.command_completer)
