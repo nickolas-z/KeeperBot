@@ -226,7 +226,11 @@ class Bot(Application):
 
         record = self.book.find_contact(name)
         if record:
-            return f"{name}'s birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'}"
+            birthday = record.birthday.value.strftime(
+                Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'
+            table_data = [[name, birthday]]
+            headers = ["Name", "Birthday"]
+            print(tabulate(table_data, headers, tablefmt="fancy_grid"))
         else:
             raise KeyError(f"{Fore.RED}Contact {
                            name} not found.{Style.RESET_ALL}")
