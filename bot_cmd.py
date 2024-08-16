@@ -11,7 +11,6 @@ class BotCmd(Enum):
     EXIT = "exit"
     HELLO = "hello"
     CONTACT_ADD = "add"
-    CONTACT_CHANGE = "change"
     CONTACT_SHOW_ALL = "all"
     CONTACT_SHOW_PHONES = "phone"
     ADD_EMAIL = "add-email"
