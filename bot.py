@@ -78,8 +78,7 @@ class Bot(Application):
         """
         if len(args) < 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add [name] [phone]{
-                    Style.RESET_ALL}"
+                f"{Fore.RED}Invalid input. Use: add [name] [phone]{Style.RESET_ALL}"
             )
         name, phone, *_ = args
 
@@ -106,35 +105,7 @@ class Bot(Application):
             record.add_phone(phone)
         return message
 
-    @data_saver
-    @input_error
-    def change_contact(self, args):
-        """
-        This function changes the phone number of a contact.
-        Args:
-            args: list of command arguments.
-        Return:
-            str: message indicating the execution result.
-        """
-        if len(args) != 3:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: change [name] [old_phone] [new_phone]{Style.RESET_ALL}"
-            )
-
-        name, old_phone, new_phone = args
-        record = self.book.find_contact(name)
-
-        if record:
-            try:
-                record.edit_phone(old_phone, new_phone)
-                return f"Contact {name} updated."
-            except ValueError as e:
-                return f"{Fore.RED}Failed to update contact: {str(e)}{Style.RESET_ALL}"
-        else:
-            raise KeyError(
-                f"{Fore.RED}Contact {
-                           name} not found.{Style.RESET_ALL}"
-            )
+    
 
     def show_all(self):
         """This function displays all contacts.
@@ -317,11 +288,7 @@ class Bot(Application):
             f"{Fore.GREEN}\tadd {Fore.YELLOW}[name] [phone]{Fore.WHITE} "
             f"- add a new contact with a name and phone number, or add a phone number to an existing contact;"
         )
-        print(
-            f"{Fore.GREEN}\tchange {
-                Fore.YELLOW}[name] [old phone] [new phone]{Fore.WHITE} "
-            f"- change the phone number for the specified contact;"
-        )
+    
         print(
             f"{Fore.GREEN}\tadd-email {Fore.YELLOW}[name] [email]{Fore.WHITE} "
             f"- add/replace an email for the specified contact;"
@@ -388,8 +355,7 @@ class Bot(Application):
             f"{Fore.GREEN}\tdelete-contact-phone {Fore.YELLOW}[name] [phone number] {Fore.WHITE}- delete contact phone;"
         )
         print(
-            f"{Fore.GREEN}\tdelete-contact-info {
-                Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
+            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
         )
         print(
             f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;"
@@ -461,18 +427,13 @@ class Bot(Application):
 
             match command:
                 case BotCmd.CLOSE | BotCmd.EXIT:
-                    print(
-                        f"{Fore.YELLOW}Good bye{' ' + str(owner.name)
-                          if owner else ''}!{Style.RESET_ALL}"
-                    )
+                    print(f"{Fore.YELLOW}Good bye{' ' + str(owner.name) if owner else ''}!{Style.RESET_ALL}")
 
                     break
                 case BotCmd.HELLO:
                     print(f"{Fore.GREEN}How can I help you?")
                 case BotCmd.CONTACT_ADD:
                     print(f"{Fore.GREEN}{self.add_contact(args)}")
-                case BotCmd.CONTACT_CHANGE:
-                    print(f"{Fore.YELLOW}{self.change_contact(args)}")
                 case BotCmd.CONTACT_SHOW_PHONES:
                     print(f"{Fore.CYAN}{self.show_phone(args)}")
                 case BotCmd.CONTACT_SHOW_ALL:
