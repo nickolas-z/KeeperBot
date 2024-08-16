@@ -62,8 +62,7 @@ class Phone(Field):
             return "+" + cleaned_number
         else:
             raise ValueError(
-                f"{Fore.RED}The phone number must be in international format and begin with '+' followed by 12 to 15 digits.{
-                    Style.RESET_ALL}"
+                f"{Fore.RED}The phone number must be in international format and begin with '+' followed by 12 to 15 digits.{Style.RESET_ALL}"
             )
 
     def __repr__(self) -> str:
