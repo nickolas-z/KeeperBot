@@ -3,21 +3,22 @@ from functools import wraps
 
 from colorama import Fore, Style, init
 from prompt_toolkit import PromptSession
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import NestedCompleter
+from prompt_toolkit.formatted_text import ANSI
 from tabulate import tabulate
 
 from AddressBook import Record, AddressBook, Birthday, Note
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
 
-
-
+init(autoreset=True)
 
 
 class Bot(Application):
     """
     Application class
     """
+
     contacts_info = None
 
     def __init__(self, app_name, filename="addressbook.pkl"):
@@ -25,10 +26,49 @@ class Bot(Application):
         self.filename = filename
         self.book = Bot.__load_data(self.filename)
 
-        self.commands_list = BotCmd.get_all_commands()
-        self.command_completer = WordCompleter(self.commands_list, ignore_case=True)
-        self.session = PromptSession(completer=self.command_completer)
+        # self.commands_list = BotCmd.get_all_commands()
+        # self.command_completer = WordCompleter(self.commands_list, ignore_case=True)
+        # self.session = PromptSession(completer=self.command_completer)
+        self.__session = PromptSession()
+        self.__completer_dict = self.create_completer_dict(BotCmd.get_commands())
+        self.__completer = NestedCompleter.from_nested_dict(self.__completer_dict)
+
         Bot.contacts_info = self.book
+
+    def create_completer_dict(self, commands):
+        """
+        This function creates a nested dictionary for the completer.
+        Args:
+            commands: dictionary of commands.
+        Return:
+            dict: nested dictionary for the completer.
+        """
+        completer_dict = {}
+        for cmd, details in commands.items():
+            if "subcommands" in details and details["subcommands"]:
+                completer_dict[cmd] = self.create_completer_dict(details["subcommands"])
+            else:
+                completer_dict[cmd] = None
+        return completer_dict
+
+    def get_bottom_toolbar(self):
+        """
+        This function returns the bottom toolbar text.
+        Return:
+            str: bottom toolbar text.
+        """
+        text = self.__session.default_buffer.text.strip()
+        parts = text.split()
+        # this function found in BotCmd.get_commands() command sequence and return format of command
+        if parts:
+            command_name = parts[0]
+            command = BotCmd.get_command_format(command_name, parts[1:])
+            if command:
+                return ANSI(f"{Fore.GREEN}Format: {command}{Style.RESET_ALL}")
+
+        return ANSI(
+            f"{Fore.GREEN}Format: command [subcommand] [arguments]{Style.RESET_ALL}"
+        )
 
     @staticmethod
     def __parse_input(user_input):
@@ -82,7 +122,7 @@ class Bot(Application):
         """
         if len(args) < 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add [name] [phone]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add [name] [phone]{Style.RESET_ALL}"
             )
         name, phone, *_ = args
 
@@ -109,8 +149,6 @@ class Bot(Application):
             record.add_phone(phone)
         return message
 
-    
-
     def show_all(self):
         """This function displays all contacts.
         Return:
@@ -136,15 +174,25 @@ class Bot(Application):
                     ", ".join(str(tag) for tag in note.tags) for note in record.notes
                 ),
                 "+" if record.owner else "",
-            ] for record in records
+            ]
+            for record in records
         ]
 
-        headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
+        headers = [
+            "Name",
+            "Phone",
+            "Email",
+            "Birthday",
+            "Address",
+            "Notes",
+            "Tag",
+            "Owner",
+        ]
 
         return tabulate(table_data, headers, tablefmt="fancy_grid")
 
     @input_error
-    def show_phone(self, args):
+    def show_phones(self, args):
         """This function displays the phone number of a contact.
         Args:
             args: list of command arguments.
@@ -153,7 +201,7 @@ class Bot(Application):
         """
         if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: phone [name]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: phone [name]{Style.RESET_ALL}"
             )
 
         name = args[0]
@@ -165,6 +213,7 @@ class Bot(Application):
                 table_data = [[name, phone] for phone in phones]
                 headers = ["Name", "Phone Number"]
                 print(tabulate(table_data, headers, tablefmt="fancy_grid"))
+                return ""
             else:
                 return f"{Fore.RED}No phone numbers found for {name}.{Style.RESET_ALL}"
         else:
@@ -182,7 +231,7 @@ class Bot(Application):
         """
         if len(args) != 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-birthday [name] [birthday]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add-birthday [name] [birthday]{Style.RESET_ALL}"
             )
         name, birthday = args
         record = self.book.find_contact(name)
@@ -203,7 +252,7 @@ class Bot(Application):
         """
         if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: show-birthday [name]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: show-birthday [name]{Style.RESET_ALL}"
             )
         name = args[0]
 
@@ -235,7 +284,7 @@ class Bot(Application):
             upcoming_birthdays = self.book.get_upcoming_birthdays(int(args[0]))
         else:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: show-birthdays [number of days or empty for today]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: show-birthdays [number of days or empty for today]{Style.RESET_ALL}"
             )
 
         if not upcoming_birthdays:
@@ -277,100 +326,6 @@ class Bot(Application):
         except FileNotFoundError:
             return AddressBook()
 
-    @staticmethod
-    def __show_help() -> None:
-        """
-        This function displays help for available commands.
-        """
-        print(f"{Fore.WHITE}Available commands (tab to complete):")
-        print(
-            f"{Fore.GREEN}\tadd {Fore.YELLOW}[name] [phone]{Fore.WHITE} "
-            f"- add a new contact with a name and phone number, or add a phone number to an existing contact;"
-        )
-    
-        print(
-            f"{Fore.GREEN}\tadd-email {Fore.YELLOW}[name] [email]{Fore.WHITE} "
-            f"- add/replace an email for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tadd-address {Fore.YELLOW}[name] [address]{Fore.WHITE} "
-            f"- add/replace an address for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tadd-note {Fore.YELLOW}[author_name]{Fore.WHITE} "
-            f"- add note for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
-            f"- edit note by title for specified owner;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
-            f"- delete note by title for specified owner;"
-        )
-        print(
-            f"{Fore.GREEN}\tadd-tags {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- add tags to note;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-tag {Fore.YELLOW}[tag] [note_title]{Fore.WHITE} "
-            f"- delete specified tag for specified note;"
-        )
-        print(
-            f"{Fore.GREEN}\tget-notes-by-tag {Fore.YELLOW}[tag]{Fore.WHITE} "
-            f"- finds all notes with specified tag;"
-        )
-        print(
-            f"{Fore.GREEN}\tget-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- finds note with specified title;"
-        )
-        print(
-            f"{Fore.GREEN}\tget-notes {Fore.YELLOW}[name]{Fore.WHITE} "
-            f"- returns all notes for specified contact;"
-        )
-
-        print(
-            f"{Fore.GREEN}\tphone {Fore.YELLOW}[name]{Fore.WHITE} - show phone numbers for the specified contact;"
-        )
-        print(f"{Fore.GREEN}\tall{Fore.WHITE} - show all contacts in the address book;")
-        print(
-            f"{Fore.GREEN}\tadd-birthday {Fore.YELLOW}[name] [birthday] {Fore.WHITE}"
-            f"- add a birthday (DD.MM.YYYY) for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tshow-birthday {Fore.YELLOW}[name] {Fore.WHITE}"
-            f"- show the birthday for the specified contact;"
-        )
-        print(
-            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} "
-            f"- show birthdays that will occur within the next number of days, empty for today;"
-        )
-        print(
-            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] "
-            f"[available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
-        )
-        print(
-            f"{Fore.GREEN}\tedit-contact-phone {Fore.YELLOW}[name] [old phone] [new phone] {Fore.WHITE}- update contact phone;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-contact-phone {Fore.YELLOW}[name] [phone number] {Fore.WHITE}- delete contact phone;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] "
-            f"[available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
-        )
-        print(
-            f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;"
-        )
-        print(f"{Fore.GREEN}\thello {Fore.WHITE}- get a greeting from the bot;")
-        print(
-            f"{Fore.GREEN}\tsearch-by {Fore.YELLOW}{Fore.WHITE} "
-            f"- find contants by specified field and value;"
-        )
-        print(
-            f"{Fore.GREEN}\tclose {Fore.WHITE}or {Fore.GREEN}exit {Fore.WHITE}- close the program."
-        )
-
     @data_saver
     @input_error
     def add_owner(self):
@@ -389,7 +344,9 @@ class Bot(Application):
             self.book.add_record(record)
 
             def add_owner_phone():
-                telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
+                telephone = input(
+                    f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: "
+                )
 
                 try:
                     record.add_phone(telephone)
@@ -403,94 +360,11 @@ class Bot(Application):
             print(add_owner_phone())
 
     @data_saver
-    @print_execution_time
-    def run(self):
-        init(autoreset=True)
-        owner = self.book.get_owner()
-
-        if owner is None:
-            self.add_owner()
-        else:
-            print(
-                f"{Fore.MAGENTA}Glad to see you, {owner.name}!{Style.RESET_ALL}",
-                end="\n\n",
-            )
-
-        Bot.__show_help()
-        print(f"Address book has {len(self.book.data)} contact(s).")
-
-        while True:
-            user_input = self.session.prompt("Enter a command: ")
-            parsed_input = Bot.__parse_input(user_input)
-
-            if not parsed_input:
-                print(Fore.RED + "Invalid command format.")
-                continue
-
-            command, args = parsed_input
-
-            match command:
-                case BotCmd.CLOSE | BotCmd.EXIT:
-                    print(f"{Fore.YELLOW}Good bye{' ' + str(owner.name) if owner else ''}!{Style.RESET_ALL}")
-
-                    break
-                case BotCmd.HELLO:
-                    print(f"{Fore.GREEN}How can I help you?")
-                case BotCmd.CONTACT_ADD:
-                    print(f"{Fore.GREEN}{self.add_contact(args)}")
-                case BotCmd.CONTACT_SHOW_PHONES:
-                    print(f"{Fore.CYAN}{self.show_phone(args)}")
-                case BotCmd.CONTACT_SHOW_ALL:
-                    print(self.show_all())
-                case BotCmd.BIRTHDAY_ADD:
-                    self.add_birthday(args)
-                case BotCmd.BIRTHDAY_SHOW:
-                    print(f"{Fore.CYAN}{self.show_birthday(args)}")
-                case BotCmd.BIRTHDAY_SHOW_ALL:
-                    print(f"{Fore.MAGENTA}{self.show_birthdays(args)}")
-                case BotCmd.HELP:
-                    self.__show_help()
-                case BotCmd.ADD_EMAIL:
-                    print(f"{Fore.GREEN}{self.add_email(args)}")
-                case BotCmd.ADD_ADDRESS:
-                    print(f"{Fore.GREEN}{self.add_address(args)}")
-                case BotCmd.EDIT:
-                    print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
-                case BotCmd.EDIT_CONTACT_PHONE:
-                    print(f"{Fore.MAGENTA}{self.edit_contact_phone(args)}")
-                case BotCmd.DELETE:
-                    print(f"{Fore.MAGENTA}{self.delete_contact_info(args)}")
-                case BotCmd.DELETE_CONTACT_PHONE:
-                    print(f"{Fore.MAGENTA}{self.delete_contact_phone(args)}")
-                case BotCmd.DELETE_CONTACT:
-                    print(f"{Fore.MAGENTA}{self.delete_contact(args)}")
-                case BotCmd.SEARCH_BY:
-                    print(f"{Fore.GREEN}{self.search_by(args)}")
-                case BotCmd.ADD_NOTE:
-                    print(f"{Fore.GREEN}{self.add_note(args)}")
-                case BotCmd.EDIT_NOTE:
-                    print(f"{Fore.GREEN}{self.edit_note(args)}")
-                case BotCmd.DELETE_NOTE:
-                    print(f"{Fore.GREEN}{self.delete_note(args)}")
-                case BotCmd.ADD_TAG:
-                    print(f"{Fore.GREEN}{self.add_tags(args)}")
-                case BotCmd.DELETE_TAG:
-                    print(f"{Fore.GREEN}{self.delete_tag(args)}")
-                case BotCmd.GET_NOTES_BY_TAG:
-                    print(f"{self.get_notes_by_tag(args)}")
-                case BotCmd.GET_NOTE_BY_TITLE:
-                    print(f"{Fore.GREEN}{self.get_note_by_title(args)}")
-                case BotCmd.GET_ALL_NOTES:
-                    print(f"{self.get_notes(args)}")
-                case _:
-                    print(f"{Fore.RED}Invalid command.")
-
-    @data_saver
     @input_error
     def add_email(self, args):
         if len(args) != 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-email [name] [email]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add-email [name] [email]{Style.RESET_ALL}"
             )
         name, email = args
 
@@ -507,8 +381,9 @@ class Bot(Application):
     @input_error
     def add_address(self, args):
         if len(args) < 2:
-            raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
-                             )
+            raise ValueError(
+                f"{Fore.RED}Invalid format. Use: add-address [name] [address]{Style.RESET_ALL}"
+            )
         name = args[0]
         del args[0]
         address = " ".join(args)
@@ -577,7 +452,7 @@ class Bot(Application):
         # Proceed with the search using the provided or collected args
         if len(args) != 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: search-by [field] [value]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: search-by [field] [value]{Style.RESET_ALL}"
             )
 
         field, value = args
@@ -586,7 +461,7 @@ class Bot(Application):
         records = self.book.find_contacts_by_field(field, value)
 
         if records:
-           return self.build_table_for_records(records)
+            print(f"{self.build_table_for_records(records)}")
         else:
             raise KeyError(
                 f"{Fore.RED}No contacts found for the specified {field}.{Style.RESET_ALL}"
@@ -600,23 +475,23 @@ class Bot(Application):
         """
         if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-note [author_name] [note_title]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add note [conntact name]{Style.RESET_ALL}"
             )
-        author_name, *_ = args
+        contact_name, *_ = args
 
-        record = self.book.find_contact(author_name)
+        record = self.book.find_contact(contact_name)
         if record:
-            title = input("Enter note title [enter to exit]: ")
+            title = input("Enter note title: ")
             if not title:
                 return None
 
             note = input("Enter note content: \n")
             record.add_note(title, note)
 
-            return f"Note for {author_name} added."
+            return f"Note for {contact_name} added."
         else:
             raise KeyError(
-                f"{Fore.RED}Contact {author_name} not found. Please create contact first. {Style.RESET_ALL}"
+                f"{Fore.RED}Contact {contact_name} not found. Please create contact first. {Style.RESET_ALL}"
             )
 
     @data_saver
@@ -627,7 +502,7 @@ class Bot(Application):
         """
         if len(args) < 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: edit-note [note_title]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: edit note [contact name] [note title]{Style.RESET_ALL}"
             )
         owner, *note_title = args
         note_title = " ".join(note_title)
@@ -638,6 +513,7 @@ class Bot(Application):
 
         note = record.find_note_by_title(note_title)
         if note:
+
             def get_new_value(title=None, value=None):
                 if not title:
                     title = input("Enter new note title: \n")
@@ -662,7 +538,7 @@ class Bot(Application):
         """
         if len(args) < 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: delete-note [note_title]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: delete-note [note_title]{Style.RESET_ALL}"
             )
         owner, *note_title = args
         note_title = " ".join(note_title)
@@ -673,6 +549,7 @@ class Bot(Application):
 
         record.remove_note_by_title(note_title)
         return f"Note {note_title} deleted."
+
     @data_saver
     @input_error
     def add_tags(self, args):
@@ -681,7 +558,7 @@ class Bot(Application):
         """
         if len(args) < 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: add-tags [note_title]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add tags [note title]{Style.RESET_ALL}"
             )
         note_title = " ".join(args)
 
@@ -702,7 +579,7 @@ class Bot(Application):
         """
         if len(args) < 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: delete-tag [tag] [note_title]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: delete tag [tag] [note_title]{Style.RESET_ALL}"
             )
         tag, *note_title = args
         note_title = " ".join(note_title)
@@ -722,7 +599,7 @@ class Bot(Application):
 
         if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: get-notes-by-tag [tag]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: get-notes-by-tag [tag]{Style.RESET_ALL}"
             )
         tag, *_ = args
 
@@ -739,7 +616,7 @@ class Bot(Application):
         """
         if len(args) < 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: get-note [note_title]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: find notes-by-title [note title]{Style.RESET_ALL}"
             )
         note_title = " ".join(args)
 
@@ -756,7 +633,7 @@ class Bot(Application):
         """
         if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: get-notes [name]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: show notes [name]{Style.RESET_ALL}"
             )
         name, *_ = args
 
@@ -768,12 +645,14 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
     def build_table_for_notes(self, notes):
+        """
+        This function builds a table for notes.
+        Args:
+            notes: list of notes.
+        """
         table_data = [
-            [
-                note.title,
-                ", ".join(str(tag) for tag in note.tags),
-                note.value
-            ] for note in notes
+            [note.title, ", ".join(str(tag) for tag in note.tags), note.value]
+            for note in notes
         ]
 
         headers = ["Title", "Tags", "Note"]
@@ -783,35 +662,57 @@ class Bot(Application):
     @data_saver
     @input_error
     def delete_contact(self, args):
+        """
+        This function deletes a contact from the address book.
+        Args:
+            args: list of command arguments.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid format. Use: delete contact [name]{Style.RESET_ALL}"
+            )
         name, *_ = args
         record = self.book.find_contact(name)
         if record:
             return self.book.delete(name)
         else:
             return f"Contact with name {name} not found"
+
     @data_saver
     @input_error
     def edit_contact_info(self, args):
+        """
+        This function edits a contact's information.
+        Args:
+            args: list of command arguments
+        """
         if len(args) < 3:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: edit-contact-info [name] [field name] [new value]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: edit info [name] [field name] [new value]{Style.RESET_ALL}"
             )
-        name, field, new_value, *_ = args
+        name, field, *new_value = args
+        new_value = " ".join(new_value)
+
         record = self.book.find_contact(name)
         method = field.lower()
-        if method == 'name' and record:
+        if method == "name" and record:
             return self.book.update_name(name, new_value)
         if record:
             return getattr(record, f"edit_{method}")(new_value)
         else:
-            return f"Contact with name {name} not found"
+            return f"{Fore.RED}Contact with name {name} not found{Style.RESET_ALL}"
 
     @data_saver
     @input_error
     def delete_contact_info(self, args):
+        """
+        This function deletes a contact's information.
+        Args:
+            args: list of command arguments
+        """
         if len(args) < 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: delete-contact-info [name] [field name]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: delete іnfo [name] [field name]{Style.RESET_ALL}"
             )
         name, field, *_ = args
         record = self.book.find_contact(name)
@@ -824,9 +725,14 @@ class Bot(Application):
     @data_saver
     @input_error
     def edit_contact_phone(self, args):
+        """
+        This function edits a contact's phone number.
+        Args:
+            args: list of command arguments
+        """
         if len(args) < 3:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: edit-contact-phone [name] [old phone] [new phone]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: edit phone [name] [old phone] [new phone]{Style.RESET_ALL}"
             )
         name, old_number, new_number, *_ = args
         record = self.book.find_contact(name)
@@ -838,9 +744,14 @@ class Bot(Application):
     @data_saver
     @input_error
     def delete_contact_phone(self, args):
+        """
+        This function deletes a contact's phone number.
+        Args:
+            args: list of command arguments
+        """
         if len(args) < 2:
             raise ValueError(
-                f"{Fore.RED}Invalid input. Use: delete-contact-phone [name] [phone number]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: delete-contact-phone [name] [phone number]{Style.RESET_ALL}"
             )
         name, number, *_ = args
         record = self.book.find_contact(name)
@@ -848,3 +759,131 @@ class Bot(Application):
             return record.remove_phone(number)
         else:
             return f"Contact with name {name} not found"
+
+    def handle_command(self, command, args) -> bool:
+        """
+        This function handles the user command.
+        Args:
+            command: the command to execute.
+            args: list of command arguments.
+        Return:
+            bool: True if the command was handled successfully, False otherwise.
+        """
+        match command:
+            case BotCmd.HELLO:
+                print(
+                    f"{Fore.GREEN} Hi {self.__owner.name if self.__owner else ''}! How can I help you?"
+                )
+            case BotCmd.HELP:
+                BotCmd.show_help()
+            case BotCmd.CLOSE | BotCmd.EXIT:
+                print(
+                    f"{Fore.YELLOW}Good bye{' ' + str(self.__owner.name) if self.__owner else ''}!{Style.RESET_ALL}"
+                )
+                return False
+            case BotCmd.ADD_CONTACT:
+                print(f"{Fore.GREEN}{self.add_contact(args)}")
+            case BotCmd.ADD_EMAIL:
+                print(f"{Fore.GREEN}{self.add_email(args)}")
+            case BotCmd.ADD_ADDRESS:
+                print(f"{Fore.GREEN}{self.add_address(args)}")
+            case BotCmd.ADD_BIRTHDAY:
+                print(f"{Fore.GREEN}{self.add_birthday(args)}")
+            case BotCmd.ADD_NOTE:
+                print(f"{Fore.GREEN}{self.add_note(args)}")
+            case BotCmd.ADD_TAG:
+                print(f"{Fore.GREEN}{self.add_tags(args)}")
+
+            case BotCmd.SHOW_ALL_CONTACTS:
+                print(self.show_all())
+            case BotCmd.SHOW_BIRTHDAY:
+                self.show_birthday(args)
+            case BotCmd.SHOW_BIRTHDAYS:
+                self.show_birthdays(args)
+            case BotCmd.SHOW_PHONES:
+                print(f"{Fore.GREEN}{self.show_phones(args)}")
+            case BotCmd.SHOW_NOTES:
+                print(f"{self.get_notes(args)}")
+
+            case BotCmd.EDIT_INFO:
+                print(f"{Fore.GREEN}{self.edit_contact_info(args)}")
+            case BotCmd.EDIT_PHONE:
+                print(f"{Fore.GREEN}{self.edit_contact_phone(args)}")
+            case BotCmd.EDIT_NOTE:
+                print(f"{Fore.GREEN}{self.edit_note(args)}")
+
+            case BotCmd.DELETE_CONTACT:
+                print(f"{Fore.GREEN}{self.delete_contact(args)}")
+            case BotCmd.DELETE_PHONE:
+                print(f"{Fore.GREEN}{self.delete_contact_phone(args)}")
+            case BotCmd.DELETE_INFO:
+                print(f"{Fore.GREEN}{self.delete_contact_info(args)}")
+            case BotCmd.DELETE_NOTE:
+                print(f"{Fore.GREEN}{self.delete_note(args)}")
+            case BotCmd.DELETE_TAG:
+                print(f"{Fore.GREEN}{self.delete_tag(args)}")
+
+            case BotCmd.FIND_NOTES_BY_TAG:
+                print(f"{self.get_notes_by_tag(args)}")
+            case BotCmd.FIND_NOTES_BY_TITLE:
+                print(f"{Fore.GREEN}{self.get_note_by_title(args)}")
+            case BotCmd.SEARCH_BY:
+                print(f"{Fore.GREEN}{self.search_by(args)}")
+
+        return True
+
+    @data_saver
+    @print_execution_time
+    def run(self):
+        """
+        This function runs the application.
+        """
+        self.__owner = self.book.get_owner()
+
+        if self.__owner is None:
+            self.add_owner()
+        else:
+            print(
+                f"{Fore.WHITE}Glad to see you, {self.__owner.name}!{Style.RESET_ALL}",
+                end="\n\n",
+            )
+
+        BotCmd.show_help()
+        print(f"\nAddress book has {len(self.book.data)} contact(s).\n")
+        print(f"Enter a command to continue...")
+
+        # get all commands for loop usage
+        commands = BotCmd.get_commands()
+
+        while True:
+            user_input = self.__session.prompt(
+                "> ", completer=self.__completer, bottom_toolbar=self.get_bottom_toolbar
+            )
+            parts = user_input.split()
+            if not parts:
+                continue
+
+            command = parts[0]
+            args = parts[1:]
+
+            if command in commands:
+                cmd_details = commands[command]
+                if (
+                    "subcommands" in cmd_details
+                    and args
+                    and args[0] in cmd_details["subcommands"]
+                ):
+                    subcommand = args[0]
+                    subcmd_details = cmd_details["subcommands"][subcommand]
+                    if not self.handle_command(subcmd_details["id"], args[1:]):
+                        break
+                else:
+                    if "id" in cmd_details:
+                        if not self.handle_command(cmd_details["id"], args):
+                            break
+                    else:
+                        print(
+                            f"{Fore.RED}Unknown subcommand: {args[0] if args else {command}}"
+                        )
+            else:
+                print(f"{Fore.RED}Unknown command: {command}")
