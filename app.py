@@ -1,6 +1,6 @@
 from colorama import Fore
 from bot import Bot
-from cmd import Cmd
+from bot_cmd import BotCmd
 
 
 def completer(text, state):
@@ -10,7 +10,7 @@ def completer(text, state):
         text: the current input text.
         state: the current state.
     """
-    options = [cmd for cmd in Cmd.get_all_commands() if cmd.startswith(text)]
+    options = [cmd for cmd in BotCmd.get_all_commands() if cmd.startswith(text)]
     if state < len(options):
         return options[state]
     else:

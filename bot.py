@@ -13,6 +13,7 @@ from helpers import Application, input_error, print_execution_time
 
 
 
+
 class Bot(Application):
     """
     Application class
@@ -58,6 +59,7 @@ class Bot(Application):
         user_input = input("Enter 'yes' to confirm: ")
         return user_input.strip().lower() == "yes"
 
+    @staticmethod
     def data_saver(func):
         @wraps(func)
         def inner(*args, **kwargs):
@@ -340,10 +342,12 @@ class Bot(Application):
             f"- show the birthday for the specified contact;"
         )
         print(
-            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} - show birthdays that will occur within the next number of days, empty for today;"
+            f"{Fore.GREEN}\tshow-birthdays{Fore.YELLOW} [days] {Fore.WHITE} "
+            f"- show birthdays that will occur within the next number of days, empty for today;"
         )
         print(
-            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
+            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name] "
+            f"[available field name. List of examples: [name, birthday, email, address]] [new value] {Fore.WHITE}- update contact info;"
         )
         print(
             f"{Fore.GREEN}\tedit-contact-phone {Fore.YELLOW}[name] [old phone] [new phone] {Fore.WHITE}- update contact phone;"
@@ -352,7 +356,8 @@ class Bot(Application):
             f"{Fore.GREEN}\tdelete-contact-phone {Fore.YELLOW}[name] [phone number] {Fore.WHITE}- delete contact phone;"
         )
         print(
-            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
+            f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] "
+            f"[available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
         )
         print(
             f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;"
@@ -383,17 +388,19 @@ class Bot(Application):
 
             self.book.add_record(record)
 
-            telephone = input(
-                f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: "
-            )
+            def add_owner_phone():
+                telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
 
-            try:
-                record.add_phone(telephone)
-            except ValueError as e:
-                print(Fore.RED + str(e))
+                try:
+                    record.add_phone(telephone)
+                except ValueError as e:
+                    print(Fore.RED + str(e))
+                    return add_owner_phone()
 
-            if record.name and record.phones:
-                print(f"{Fore.GREEN}{record.name} - {record.phones[0]} ")
+                if record.name and record.phones:
+                    return f"{Fore.GREEN}{record.name} - {record.phones[0]} "
+
+            print(add_owner_phone())
 
     @data_saver
     @print_execution_time
@@ -665,7 +672,6 @@ class Bot(Application):
             raise KeyError(f"{Fore.RED}Contact {owner} not found. {Style.RESET_ALL}")
 
         record.remove_note_by_title(note_title)
-
         return f"Note {note_title} deleted."
     @data_saver
     @input_error
