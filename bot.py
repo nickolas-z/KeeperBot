@@ -801,6 +801,10 @@ class Bot(Application):
         method = field.lower()
         if method == 'name' and record:
             return self.book.update_name(name, new_value)
+        if method == 'address' and record:
+            del(args[0], args[1])
+            address = " ".join(args)
+            return getattr(record, f"edit_{method}")(address)
         if record:
             return getattr(record, f"edit_{method}")(new_value)
         else:
