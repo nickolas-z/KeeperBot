@@ -27,7 +27,7 @@ class BotCmd(Enum):
     BIRTHDAY_SHOW = "@show-birthday"
     BIRTHDAY_SHOW_ALL = "@show-birthdays"
     HELP = "help"
-    SEARCH_BY = "@search-by"
+    SEARCH_BY = "search-info"
     YES = "@yes"
     NO = "@no"
     EDIT = "edit-contact-info"

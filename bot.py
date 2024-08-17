@@ -335,7 +335,10 @@ class Bot(Application):
             f"- {Fore.WHITE}add contact information (phone, email, address, note, tags, boirthday) for the specified contact;"
         )
         print(
-            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name]- {Fore.WHITE}edit or update contact info (name, phone, email, address, boirthday);"
+            f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name]- {Fore.WHITE}edit or update contact info (name, phone, email, address, birthday);"
+        )
+        print(
+            f"{Fore.GREEN}\tsearch-info {Fore.YELLOW}- search information{Fore.WHITE} (by name, by phone, by email, by address, by note, by tags,by birthday);"
         )
         print(
             f"{Fore.GREEN}\tshow-info {Fore.YELLOW}- show information{Fore.WHITE} (phones for a contact, birthday for a contact, upcoming birthdays);"
@@ -602,65 +605,78 @@ class Bot(Application):
 
         else:
             return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
-
-    @data_saver
+        
+    @data_saver        
     @input_error
-    def search_info(self, args):
+    def search_by(self, args=None):
         """
-        This function provides a menu to search for different types of contact information.
-        Args:
-            args: list of command arguments.
-        Return:
-            str: message indicating the execution result.
+        This function interacts with the user to gather search criteria,
+        and then performs the search based on the provided criteria.
         """
-        print("Choose the information you want to search:")
-        print("1. Search by name")
-        print("2. Search by phone number")
-        print("3. Search by email")
-        print("4. Search by address")
-        print("5. Search by note content")
-        print("6. Search by tag")
-        print("7. Search by birthday")
-        choice = input("Enter the number of your choice: ")
 
-        if choice == "1":
-            if len(args) == 0:
-                name = input("Please enter the name of the contact: ")
-            elif len(args) == 1:
-                name = args[0]
+        # If args are not provided, interactively gather them
+        if args is None or len(args) != 2:
+            print("Choose a search criterion:")
+            print("1. Search by name")
+            print("2. Search by phone number")
+            print("3. Search by email")
+            print("4. Search by address")
+            print("5. Search by note")
+            print("6. Search by tag")
+            print("7. Search by birthday")
+            print("8. Search by all criteria")
+            criterion_choice = input("Enter the criterion number: ")
+
+            if criterion_choice == "1":
+                field = "name"
+                value = input("Enter the name to search: ")
+            elif criterion_choice == "2":
+                field = "phone"
+                value = input("Enter the phone number to search: ")
+            elif criterion_choice == "3":
+                field = "email"
+                value = input("Enter the email to search: ")
+            elif criterion_choice == "4":
+                field = "address"
+                value = input("Enter the address to search: ")
+            elif criterion_choice == "5":
+                field = "note"
+                value = input("Enter the note text to search: ")
+            elif criterion_choice == "6":
+                field = "tag"
+                value = input("Enter the tag to search: ")
+            elif criterion_choice == "7":
+                field = "birthday"
+                value = input("Enter the birthday (DD.MM.YYYY) to search: ")
+            elif criterion_choice == "8":
+                field = "all"
+                value = input(
+                    "Enter the keyword to search across all criteria: ")
             else:
-                raise ValueError(
-                    f"{Fore.RED}Invalid input. Use: search-info [name]{Style.RESET_ALL}"
-                )
+                print(f"{Fore.RED}Invalid criterion. Please try again.{Style.RESET_ALL}")
+                return
 
-            return self.search_by(["name", name])
+            args = [field, value]
 
-        elif choice == "2":
-            phone = input("Enter the phone number: ")
-            return self.search_by(["phone", phone])
+        # Proceed with the search using the provided or collected args
+        if len(args) != 2:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: search-by [field] [value]{Style.RESET_ALL}"
+            )
 
-        elif choice == "3":
-            email = input("Enter the email address: ")
-            return self.search_by(["email", email])
+        field, value = args
 
-        elif choice == "4":
-            address = input("Enter the address: ")
-            return self.search_by(["address", address])
+        # Assuming AddressBook has a method find_contacts_by_field
+        records = self.book.find_contacts_by_field(field, value)
 
-        elif choice == "5":
-            note_content = input("Enter the note content: ")
-            return self.search_by(["note", note_content])
-
-        elif choice == "6":
-            tag = input("Enter the tag: ")
-            return self.search_by(["tag", tag])
-
-        elif choice == "7":
-            birthday = input("Enter the birthday (DD.MM.YYYY): ")
-            return self.search_by(["birthday", birthday])
-
+        if records:
+            result = ""
+            for record in records:
+                result += f"\n{str(record)}"
+            return result.strip()
         else:
-            return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
+            raise KeyError(f"{Fore.RED}No contacts found for the specified {
+                           field}.{Style.RESET_ALL}")
 
     @data_saver
     @input_error
