@@ -6,9 +6,10 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from tabulate import tabulate
 
-from AddressBook import Record, AddressBook, Birthday
+from AddressBook import Record, AddressBook, Birthday, Note
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
+
 
 
 
@@ -298,12 +299,12 @@ class Bot(Application):
             f"- add note for the specified contact;"
         )
         print(
-            f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- edit note by title;"
+            f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
+            f"- edit note by title for specified owner;"
         )
         print(
-            f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-            f"- delete note by title;"
+            f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
+            f"- delete note by title for specified owner;"
         )
         print(
             f"{Fore.GREEN}\tadd-tags {Fore.YELLOW}[note_title]{Fore.WHITE} "
@@ -500,7 +501,7 @@ class Bot(Application):
     def add_address(self, args):
         if len(args) < 2:
             raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
-            )
+                             )
         name = args[0]
         del args[0]
         address = " ".join(args)
@@ -621,13 +622,28 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: edit-note [note_title]{Style.RESET_ALL}"
             )
-        note_title = " ".join(args)
+        owner, *note_title = args
+        note_title = " ".join(note_title)
 
-        note = self.book.find_note_by_title(note_title)
+        record = self.book.find_contact(owner)
+        if not record:
+            raise KeyError(f"{Fore.RED}Contact {owner} not found. {Style.RESET_ALL}")
+
+        note = record.find_note_by_title(note_title)
         if note:
-            new_note = input("Enter new note content: \n")
-            note.value = new_note
-            return f"Note {note_title} edited."
+            def get_new_value(title=None, value=None):
+                if not title:
+                    title = input("Enter new note title: \n")
+                    if not title:
+                        print(f"{Fore.RED}Title cannot be empty. {Style.RESET_ALL}")
+                        return get_new_value()
+
+                new_value = input("Enter new note content: \n")
+                return Note(title, new_value)
+
+            new_note = get_new_value()
+            record.edit_note_by_title(note_title, new_note.title, new_note.value)
+            return f"Note {note_title} edited. New note: {note}"
         else:
             raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
 
@@ -641,11 +657,16 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: delete-note [note_title]{Style.RESET_ALL}"
             )
-        note_title = " ".join(args)
+        owner, *note_title = args
+        note_title = " ".join(note_title)
 
-        self.book.delete_note_by_title(note_title)
+        record = self.book.find_contact(owner)
+        if not record:
+            raise KeyError(f"{Fore.RED}Contact {owner} not found. {Style.RESET_ALL}")
+
+        record.remove_note_by_title(note_title)
+
         return f"Note {note_title} deleted."
-
     @data_saver
     @input_error
     def add_tags(self, args):
@@ -710,7 +731,7 @@ class Bot(Application):
         """
         This function finds note by title.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: get-note [note_title]{Style.RESET_ALL}"
             )
@@ -740,7 +761,6 @@ class Bot(Application):
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-
     def build_table_for_notes(self, notes):
         table_data = [
             [
@@ -748,7 +768,7 @@ class Bot(Application):
                 ", ".join(str(tag) for tag in note.tags),
                 note.value
             ] for note in notes
-            ]
+        ]
 
         headers = ["Title", "Tags", "Note"]
 
@@ -763,7 +783,6 @@ class Bot(Application):
             return self.book.delete(name)
         else:
             return f"Contact with name {name} not found"
-
     @data_saver
     @input_error
     def edit_contact_info(self, args):
