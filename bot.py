@@ -164,6 +164,61 @@ class Bot(Application):
 
         return tabulate(table_data, headers, tablefmt="fancy_grid")
 
+    @input_error
+    def show_phone(self, args):
+        """This function displays the phone number of a contact.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: phone number of the contact.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: phone [name]{Style.RESET_ALL}"
+            )
+
+        name = args[0]
+        record = self.book.find_contact(name)
+
+        if record:
+            phones = [phone.value for phone in record.phones]
+            if phones:
+                table_data = [[name, phone] for phone in phones]
+                headers = ["Name", "Phone Number"]
+                print(tabulate(table_data, headers, tablefmt="fancy_grid"))
+            else:
+                return f"{Fore.RED}No phone numbers found for {name}.{Style.RESET_ALL}"
+        else:
+            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+
+    @input_error
+    def show_birthday(self, args):
+        """
+        This function displays the birthday of a contact.
+        Args:
+            args: list of command arguments.
+        Return:
+            str: birthday of the contact.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: show-birthday [name]{Style.RESET_ALL}"
+            )
+        name = args[0]
+
+        record = self.book.find_contact(name)
+        if record:
+            birthday = (
+                record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT)
+                if record.birthday
+                else "Not set"
+            )
+            table_data = [[name, birthday]]
+            headers = ["Name", "Birthday"]
+            print(tabulate(table_data, headers, tablefmt="fancy_grid"))
+        else:
+            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+
     @data_saver
     @input_error
     def show_info(self, args=None):
@@ -664,6 +719,114 @@ class Bot(Application):
 
     @data_saver
     @input_error
+    def delete_note(self, args):
+        """
+        This function deletes a note of a contact.
+        """
+        if len(args) < 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-note [note_title]{Style.RESET_ALL}"
+            )
+        note_title = " ".join(args)
+
+        self.book.delete_note_by_title(note_title)
+        return f"Note {note_title} deleted."
+
+    @data_saver
+    @input_error
+    def delete_tag(self, args):
+        """
+        This function deletes a tag from a note.
+        """
+        if len(args) < 2:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-tag [tag] [note_title]{Style.RESET_ALL}"
+            )
+        tag, *note_title = args
+        note_title = " ".join(note_title)
+
+        note = self.book.find_note_by_title(note_title)
+        if note:
+            note.tags = [t for t in note.tags if t != tag]
+            return f"Tag {tag} deleted from {note_title}."
+        else:
+            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+
+    @input_error
+    def get_notes_by_tag(self, args):
+        """
+        This function finds all notes with specified tag.
+        """
+
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: get-notes-by-tag [tag]{Style.RESET_ALL}"
+            )
+        tag, *_ = args
+
+        notes = self.book.find_notes_by_tag(tag)
+        if notes:
+            return self.build_table_for_notes(notes)
+        else:
+            raise KeyError(f"{Fore.RED}Notes not found. {Style.RESET_ALL}")
+
+    @input_error
+    def get_note_by_title(self, args):
+        """
+        This function finds note by title.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: get-note [note_title]{Style.RESET_ALL}"
+            )
+        note_title = " ".join(args)
+
+        note = self.book.find_note_by_title(note_title)
+        if note:
+            return str(note)
+        else:
+            raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
+
+    @input_error
+    def get_notes(self, args):
+        """
+        This function finds all notes for specified contact.
+        """
+        if len(args) != 1:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: get-notes [name]{Style.RESET_ALL}"
+            )
+        name, *_ = args
+
+        record = self.book.find_contact(name)
+
+        if record:
+            return self.build_table_for_notes(record.notes)
+        else:
+            raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
+
+    def build_table_for_notes(self, notes):
+        table_data = [
+            [note.title, ", ".join(str(tag) for tag in note.tags), note.value]
+            for note in notes
+        ]
+
+        headers = ["Title", "Tags", "Note"]
+
+        return tabulate(table_data, headers, tablefmt="fancy_grid")
+
+    @data_saver
+    @input_error
+    def delete_contact(self, args):
+        name, *_ = args
+        record = self.book.find_contact(name)
+        if record:
+            return self.book.delete(name)
+        else:
+            return f"Contact with name {name} not found"
+
+    @data_saver
+    @input_error
     def edit_contact_info(self, args):
         """
         This function provides a menu to edit different types of contact information.
@@ -730,3 +893,32 @@ class Bot(Application):
 
         else:
             return f"{Fore.RED}Invalid choice. Please try again.{Style.RESET_ALL}"
+
+    @data_saver
+    @input_error
+    def delete_contact_info(self, args):
+        if len(args) < 2:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-contact-info [name] [field name]{Style.RESET_ALL}"
+            )
+        name, field, *_ = args
+        record = self.book.find_contact(name)
+        method = field.lower()
+        if record:
+            return getattr(record, f"delete_{method}")()
+        else:
+            return f"Contact with name {name} not found"
+
+    @data_saver
+    @input_error
+    def delete_contact_phone(self, args):
+        if len(args) < 2:
+            raise ValueError(
+                f"{Fore.RED}Invalid input. Use: delete-contact-phone [name] [phone number]{Style.RESET_ALL}"
+            )
+        name, number, *_ = args
+        record = self.book.find_contact(name)
+        if record:
+            return record.remove_phone(number)
+        else:
+            return f"Contact with name {name} not found"
