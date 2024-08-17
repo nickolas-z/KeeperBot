@@ -338,6 +338,12 @@ class Bot(Application):
             f"{Fore.GREEN}\tedit-contact-info {Fore.YELLOW}[name]- {Fore.WHITE}edit or update contact info (name, phone, email, address, boirthday);"
         )
         print(
+            f"{Fore.GREEN}\tshow-info {Fore.YELLOW}- show information{Fore.WHITE} (phones for a contact, birthday for a contact, upcoming birthdays);"
+        )
+        print(
+            f"{Fore.GREEN}\tget-info {Fore.YELLOW}- get information{Fore.WHITE} (all notes, notes by tag, note by title);"
+        )
+        print(
             f"{Fore.GREEN}\tdelete-menu {Fore.YELLOW}- delete{Fore.WHITE} (contact, name, phone, email, address, boirthday, note);"
         )
         print(
