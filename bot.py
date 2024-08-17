@@ -1,13 +1,16 @@
 ﻿import pickle
-from tabulate import tabulate
+from functools import wraps
+
 from colorama import Fore, Style, init
-from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import WordCompleter
+from tabulate import tabulate
 
 from AddressBook import Record, AddressBook, Birthday, Note
 from bot_cmd import BotCmd
 from helpers import Application, input_error, print_execution_time
-from functools import wraps
+
+
 
 
 class Bot(Application):
@@ -22,8 +25,7 @@ class Bot(Application):
         self.book = Bot.__load_data(self.filename)
 
         self.commands_list = BotCmd.get_all_commands()
-        self.command_completer = WordCompleter(
-            self.commands_list, ignore_case=True)
+        self.command_completer = WordCompleter(self.commands_list, ignore_case=True)
         self.session = PromptSession(completer=self.command_completer)
         Bot.contacts_info = self.book
 
@@ -87,9 +89,11 @@ class Bot(Application):
         if existing_contact:
             if existing_contact.name.value != name:
                 # Ask for confirmation to add the same phone number to the new contact
-                message = (f"Phone number {Fore.WHITE}{phone}{Fore.YELLOW} already exists for contact "
-                           f"{Fore.WHITE}{existing_contact.name}{Fore.YELLOW}. "
-                           f"Add it to {Fore.WHITE}{name}{Fore.YELLOW}?")
+                message = (
+                    f"Phone number {Fore.WHITE}{phone}{Fore.YELLOW} already exists for contact "
+                    f"{Fore.WHITE}{existing_contact.name}{Fore.YELLOW}. "
+                    f"Add it to {Fore.WHITE}{name}{Fore.YELLOW}?"
+                )
                 if not Bot.__confirm(message):
                     return f"{Fore.RED}Operation cancelled.{Style.RESET_ALL}"
 
@@ -103,37 +107,21 @@ class Bot(Application):
             record.add_phone(phone)
         return message
 
-    @data_saver
-    @input_error
-    def change_contact(self, args):
-        """
-        This function changes the phone number of a contact.
-        Args:
-            args: list of command arguments.
-        Return:
-            str: message indicating the execution result.
-        """
-        if len(args) != 3:
-            raise ValueError(
-                f"{Fore.RED}Invalid input. Use: change [name] [old_phone] [new_phone]{Style.RESET_ALL}"
-            )
-        name, old_phone, new_phone = args
-        record = self.book.find_contact(name)
-        if record:
-            record.edit_phone(old_phone, new_phone)
-            return f"Contact {name} updated."
-        else:
-            raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
+    
 
     def show_all(self):
         """This function displays all contacts.
         Return:
             str: list of contacts.
         """
-        if not self.book.data:
-            print("No contacts found.")
+        if self.book.data:
+            self.book.data = dict(sorted(self.book.data.items()))
+        return self.build_table_for_records(self.book.values())
 
-        self.book.data = dict(sorted(self.book.data.items()))
+    def build_table_for_records(self, records):
+        if not records:
+            return "No contacts found."
+
         table_data = [
             [
                 record.name,
@@ -142,9 +130,11 @@ class Bot(Application):
                 record.birthday,
                 record.address,
                 ", ".join(note.title for note in record.notes),
-                ", ".join(", ".join(str(tag) for tag in note.tags) for note in record.notes),
+                ", ".join(
+                    ", ".join(str(tag) for tag in note.tags) for note in record.notes
+                ),
                 "+" if record.owner else "",
-            ] for name, record in self.book.data.items()
+            ] for record in records
         ]
 
         headers = ["Name", "Phone", "Email", "Birthday", "Address", "Notes", "Tag", "Owner"]
@@ -163,14 +153,18 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: phone [name]{Style.RESET_ALL}"
             )
+
         name = args[0]
         record = self.book.find_contact(name)
+
         if record:
             phones = [phone.value for phone in record.phones]
-            if len(phones) == 1:
-                return f"{name}: {phones[0]}."
+            if phones:
+                table_data = [[name, phone] for phone in phones]
+                headers = ["Name", "Phone Number"]
+                print(tabulate(table_data, headers, tablefmt="fancy_grid"))
             else:
-                return f"{name}: {'; '.join(phones)}."
+                return f"{Fore.RED}No phone numbers found for {name}.{Style.RESET_ALL}"
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
@@ -209,12 +203,18 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid input. Use: show-birthday [name]{Style.RESET_ALL}"
             )
-
         name = args[0]
 
         record = self.book.find_contact(name)
         if record:
-            return f"{name}'s birthday: {record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT) if record.birthday else 'Not set'}"
+            birthday = (
+                record.birthday.value.strftime(Birthday.BIRTHDAY_FORMAT)
+                if record.birthday
+                else "Not set"
+            )
+            table_data = [[name, birthday]]
+            headers = ["Name", "Birthday"]
+            print(tabulate(table_data, headers, tablefmt="fancy_grid"))
         else:
             raise KeyError(f"{Fore.RED}Contact {name} not found.{Style.RESET_ALL}")
 
@@ -285,30 +285,47 @@ class Bot(Application):
             f"{Fore.GREEN}\tadd {Fore.YELLOW}[name] [phone]{Fore.WHITE} "
             f"- add a new contact with a name and phone number, or add a phone number to an existing contact;"
         )
+    
         print(
-            f"{Fore.GREEN}\tchange {Fore.YELLOW}[name] [old phone] [new phone]{Fore.WHITE} "
-            f"- change the phone number for the specified contact;"
+            f"{Fore.GREEN}\tadd-email {Fore.YELLOW}[name] [email]{Fore.WHITE} "
+            f"- add/replace an email for the specified contact;"
         )
-        print(f"{Fore.GREEN}\tadd-email {Fore.YELLOW}[name] [email]{Fore.WHITE} "
-              f"- add/replace an email for the specified contact;")
-        print(f"{Fore.GREEN}\tadd-address {Fore.YELLOW}[name] [address]{Fore.WHITE} "
-              f"- add/replace an address for the specified contact;")
-        print(f"{Fore.GREEN}\tadd-note {Fore.YELLOW}[author_name]{Fore.WHITE} "
-              f"- add note for the specified contact;")
-        print(f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
-              f"- edit note by title for specified owner;")
-        print(f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
-              f"- delete note by title for specified owner;")
-        print(f"{Fore.GREEN}\tadd-tags {Fore.YELLOW}[note_title]{Fore.WHITE} "
-              f"- add tags to note;")
-        print(f"{Fore.GREEN}\tdelete-tag {Fore.YELLOW}[tag] [note_title]{Fore.WHITE} "
-              f"- delete specified tag for specified note;")
-        print(f"{Fore.GREEN}\tget-notes-by-tag {Fore.YELLOW}[tag]{Fore.WHITE} "
-              f"- finds all notes with specified tag;")
-        print(f"{Fore.GREEN}\tget-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
-              f"- finds note with specified title;")
-        print(f"{Fore.GREEN}\tget-notes {Fore.YELLOW}[name]{Fore.WHITE} "
-              f"- returns all notes for specified contact;")
+        print(
+            f"{Fore.GREEN}\tadd-address {Fore.YELLOW}[name] [address]{Fore.WHITE} "
+            f"- add/replace an address for the specified contact;"
+        )
+        print(
+            f"{Fore.GREEN}\tadd-note {Fore.YELLOW}[author_name]{Fore.WHITE} "
+            f"- add note for the specified contact;"
+        )
+        print(
+            f"{Fore.GREEN}\tedit-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
+            f"- edit note by title for specified owner;"
+        )
+        print(
+            f"{Fore.GREEN}\tdelete-note {Fore.YELLOW}[contact_name] [note_title]{Fore.WHITE} "
+            f"- delete note by title for specified owner;"
+        )
+        print(
+            f"{Fore.GREEN}\tadd-tags {Fore.YELLOW}[note_title]{Fore.WHITE} "
+            f"- add tags to note;"
+        )
+        print(
+            f"{Fore.GREEN}\tdelete-tag {Fore.YELLOW}[tag] [note_title]{Fore.WHITE} "
+            f"- delete specified tag for specified note;"
+        )
+        print(
+            f"{Fore.GREEN}\tget-notes-by-tag {Fore.YELLOW}[tag]{Fore.WHITE} "
+            f"- finds all notes with specified tag;"
+        )
+        print(
+            f"{Fore.GREEN}\tget-note {Fore.YELLOW}[note_title]{Fore.WHITE} "
+            f"- finds note with specified title;"
+        )
+        print(
+            f"{Fore.GREEN}\tget-notes {Fore.YELLOW}[name]{Fore.WHITE} "
+            f"- returns all notes for specified contact;"
+        )
 
         print(
             f"{Fore.GREEN}\tphone {Fore.YELLOW}[name]{Fore.WHITE} - show phone numbers for the specified contact;"
@@ -338,7 +355,8 @@ class Bot(Application):
             f"{Fore.GREEN}\tdelete-contact-info {Fore.YELLOW}[name] [available field name. List of examples: [birthday, email, address]] {Fore.WHITE}- delete contact info;"
         )
         print(
-            f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;")
+            f"{Fore.GREEN}\tdelete-contact {Fore.YELLOW}[name] {Fore.WHITE}- delete contact;"
+        )
         print(f"{Fore.GREEN}\thello {Fore.WHITE}- get a greeting from the bot;")
         print(
             f"{Fore.GREEN}\tsearch-by {Fore.YELLOW}{Fore.WHITE} "
@@ -353,7 +371,9 @@ class Bot(Application):
     def add_owner(self):
         print("Let's start by recording your personal details.", end="\n\n")
 
-        res = input(f"Record your data: {Fore.GREEN}Yes{Style.RESET_ALL}/{Fore.RED}No{Style.RESET_ALL} ")
+        res = input(
+            f"Record your data: {Fore.GREEN}Yes{Style.RESET_ALL}/{Fore.RED}No{Style.RESET_ALL} "
+        )
 
         if res.lower() == "Yes".lower():
             name = input("Your name: ")
@@ -363,7 +383,9 @@ class Bot(Application):
 
             self.book.add_record(record)
 
-            telephone = input(f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: ")
+            telephone = input(
+                f"{Fore.CYAN}{name}{Style.RESET_ALL}, please enter your phone: "
+            )
 
             try:
                 record.add_phone(telephone)
@@ -382,7 +404,10 @@ class Bot(Application):
         if owner is None:
             self.add_owner()
         else:
-            print(f"{Fore.MAGENTA}Glad to see you, {owner.name}!{Style.RESET_ALL}", end="\n\n")
+            print(
+                f"{Fore.MAGENTA}Glad to see you, {owner.name}!{Style.RESET_ALL}",
+                end="\n\n",
+            )
 
         Bot.__show_help()
         print(f"Address book has {len(self.book.data)} contact(s).")
@@ -406,8 +431,6 @@ class Bot(Application):
                     print(f"{Fore.GREEN}How can I help you?")
                 case BotCmd.CONTACT_ADD:
                     print(f"{Fore.GREEN}{self.add_contact(args)}")
-                case BotCmd.CONTACT_CHANGE:
-                    print(f"{Fore.YELLOW}{self.change_contact(args)}")
                 case BotCmd.CONTACT_SHOW_PHONES:
                     print(f"{Fore.CYAN}{self.show_phone(args)}")
                 case BotCmd.CONTACT_SHOW_ALL:
@@ -422,6 +445,8 @@ class Bot(Application):
                     self.__show_help()
                 case BotCmd.ADD_EMAIL:
                     print(f"{Fore.GREEN}{self.add_email(args)}")
+                case BotCmd.ADD_ADDRESS:
+                    print(f"{Fore.GREEN}{self.add_address(args)}")
                 case BotCmd.EDIT:
                     print(f"{Fore.MAGENTA}{self.edit_contact_info(args)}")
                 case BotCmd.EDIT_CONTACT_PHONE:
@@ -467,22 +492,28 @@ class Bot(Application):
             record.add_email(email)
             return f"Email for {name} added."
         else:
-            raise KeyError(f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}")
+            raise KeyError(
+                f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}"
+            )
 
     @data_saver
     @input_error
     def add_address(self, args):
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError(f"{Fore.RED}Invalid input. Use: add-address [name] [address]{Style.RESET_ALL}"
                              )
-        name, address = args
+        name = args[0]
+        del args[0]
+        address = " ".join(args)
 
         record = self.book.find_contact(name)
         if record:
             record.add_address(address)
             return f"Address for {name} added."
         else:
-            raise KeyError(f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}")
+            raise KeyError(
+                f"{Fore.RED}Contact {name} not found. Please create contact first. {Style.RESET_ALL}"
+            )
 
     @input_error
     def search_by(self, args=None):
@@ -527,10 +558,11 @@ class Bot(Application):
                 value = input("Enter the birthday (DD.MM.YYYY) to search: ")
             elif criterion_choice == "8":
                 field = "all"
-                value = input(
-                    "Enter the keyword to search across all criteria: ")
+                value = input("Enter the keyword to search across all criteria: ")
             else:
-                print(f"{Fore.RED}Invalid criterion. Please try again.{Style.RESET_ALL}")
+                print(
+                    f"{Fore.RED}Invalid criterion. Please try again.{Style.RESET_ALL}"
+                )
                 return
 
             args = [field, value]
@@ -547,12 +579,11 @@ class Bot(Application):
         records = self.book.find_contacts_by_field(field, value)
 
         if records:
-            result = ""
-            for record in records:
-                result += f"\n{str(record)}"
-            return result.strip()
+           return self.build_table_for_records(records)
         else:
-            raise KeyError(f"{Fore.RED}No contacts found for the specified {field}.{Style.RESET_ALL}")
+            raise KeyError(
+                f"{Fore.RED}No contacts found for the specified {field}.{Style.RESET_ALL}"
+            )
 
     @data_saver
     @input_error
@@ -577,7 +608,9 @@ class Bot(Application):
 
             return f"Note for {author_name} added."
         else:
-            raise KeyError(f"{Fore.RED}Contact {author_name} not found. Please create contact first. {Style.RESET_ALL}")
+            raise KeyError(
+                f"{Fore.RED}Contact {author_name} not found. Please create contact first. {Style.RESET_ALL}"
+            )
 
     @data_saver
     @input_error
@@ -634,7 +667,6 @@ class Bot(Application):
         record.remove_note_by_title(note_title)
 
         return f"Note {note_title} deleted."
-
     @data_saver
     @input_error
     def add_tags(self, args):
@@ -690,10 +722,7 @@ class Bot(Application):
 
         notes = self.book.find_notes_by_tag(tag)
         if notes:
-            result = ""
-            for note in notes:
-                result += f"\n{str(note)}"
-            return result.strip()
+            return self.build_table_for_notes(notes)
         else:
             raise KeyError(f"{Fore.RED}Notes not found. {Style.RESET_ALL}")
 
@@ -728,17 +757,17 @@ class Bot(Application):
         record = self.book.find_contact(name)
 
         if record:
-            return self.build_table_for_notes(record)
+            return self.build_table_for_notes(record.notes)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-    def build_table_for_notes(self, record):
+    def build_table_for_notes(self, notes):
         table_data = [
             [
                 note.title,
                 ", ".join(str(tag) for tag in note.tags),
                 note.value
-            ] for note in record.notes
+            ] for note in notes
         ]
 
         headers = ["Title", "Tags", "Note"]
@@ -753,8 +782,7 @@ class Bot(Application):
         if record:
             return self.book.delete(name)
         else:
-            return f'Contact with name {name} not found'
-
+            return f"Contact with name {name} not found"
     @data_saver
     @input_error
     def edit_contact_info(self, args):
@@ -770,7 +798,7 @@ class Bot(Application):
         if record:
             return getattr(record, f"edit_{method}")(new_value)
         else:
-            return f'Contact with name {name} not found'
+            return f"Contact with name {name} not found"
 
     @data_saver
     @input_error
@@ -785,7 +813,7 @@ class Bot(Application):
         if record:
             return getattr(record, f"delete_{method}")()
         else:
-            return f'Contact with name {name} not found'
+            return f"Contact with name {name} not found"
 
     @data_saver
     @input_error
@@ -799,7 +827,7 @@ class Bot(Application):
         if record:
             return record.edit_phone(old_number, new_number)
         else:
-            return f'Contact with name {name} not found'
+            return f"Contact with name {name} not found"
 
     @data_saver
     @input_error
@@ -813,4 +841,4 @@ class Bot(Application):
         if record:
             return record.remove_phone(number)
         else:
-            return f'Contact with name {name} not found'
+            return f"Contact with name {name} not found"

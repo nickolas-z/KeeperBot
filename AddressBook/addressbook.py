@@ -112,16 +112,29 @@ class AddressBook(UserDict):
            list: The found records.
         """
 
-        result = list()
+        result = set()
         for item in self.data.values():
             if field_name == "phone" or field_name == "phones":
                 if value in item.phones or any([value in phone.__str__() for phone in item.phones]):
-                    result.append(item)
+                    result.add(item)
+            elif field_name == "note":
+                if value in item.notes or any([value.lower() in note.__str__().lower() for note in item.notes]):
+                    result.add(item)
+            elif field_name == "tag":
+                if item.notes:
+                    for note in item.notes:
+                        if any([value.lower() in tag.__str__().lower() for tag in note.tags]):
+                            result.add(item)
+                            break
             elif hasattr(item, field_name):
                 field_value = getattr(item, field_name)
-                if field_value == value or value in field_value.__str__():
-                    result.append(item)
-        return result
+                if field_value == value or value.lower() in field_value.__str__().lower():
+                    result.add(item)
+            elif field_name == "all":
+                for dict_value in item.__dict__.values():
+                    if value == dict_value or value.lower() in dict_value.__str__().lower():
+                        result.add(item)
+        return list(result)
 
     def sort_records(self) -> None:
         """Sort the records in the address book by name."""
@@ -174,8 +187,10 @@ class AddressBook(UserDict):
         """
         result = []
         for record in self.data.values():
-            if record.note and tag in record.note.tags:
-                result.append(record.note)
+            if record.notes:
+                for note in record.notes:
+                    if tag in note.tags:
+                        result.append(note)
         return result
 
     def update_name(self, name, new_name):
