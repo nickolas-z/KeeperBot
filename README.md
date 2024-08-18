@@ -49,20 +49,6 @@ Allows you to store contact book, notes, tags and additional related information
   - `note [note title]` - Search by note for all contacts
   - `tag [tag name]` - Search by tag for all contacts
 
-## KeeperTeam
-
-- <nickolasz@gmail.com>
-- <eugenkhudoliiv@gmail.com>
-- <brelyk09@gmail.com>
-- <viacheslavpaterov@gmail.com>
-- <andriyberzerk@gmail.com>
-- <koval.vladuslav.v@gmail.com>
-
-## Resources
-- Repo: [https://github.com/yourusername/KeeperBot](https://github.com/yourusername/KeeperBot)
-- Trello: [KeeperTeam](https://trello.com/invite/b/66ba58163e0e996c03a43233/ATTI3c43b36eb8846e95058a58bced7b0c5f101A71A0/team-10)
-- Slack: [KeeperTeam](https://app.slack.com/client/T06BSG8A6VA/C07GWBN88Q1)
-
 
 ## Module Build
 
@@ -83,3 +69,26 @@ pip install -e .
 
 - Creating the list: `pip freeze > requirements.txt`
 - Installing dependencies: `pip install -r requirements.txt`
+
+## KeeperTeam
+
+- <nickolasz@gmail.com>
+- <eugenkhudoliiv@gmail.com>
+- <brelyk09@gmail.com>
+- <viacheslavpaterov@gmail.com>
+- <andriyberzerk@gmail.com>
+- <koval.vladuslav.v@gmail.com>
+
+## Resources
+
+- Repo: [https://github.com/yourusername/KeeperBot](https://github.com/yourusername/KeeperBot)
+- Trello: [KeeperTeam](https://trello.com/invite/b/66ba58163e0e996c03a43233/ATTI3c43b36eb8846e95058a58bced7b0c5f101A71A0/team-10)
+- Slack: [KeeperTeam](https://app.slack.com/client/T06BSG8A6VA/C07GWBN88Q1)
+- [Final project](https://www.edu.goit.global/uk/learn/24858703/24536256/24617597/homework)
+  - [Description of the project and criteria in LMS](https://textbook.edu.goit.global/lms-python-homework/uk/docs/project/hw-01/)
+  - [Task](https://docs.google.com/spreadsheets/d/1P9yS1cL1-3zNYkwRp9vNva7YgJfDU6FpvbRUw8_VSb8/edit?usp=sharing)
+  - [Presentation: preparation for the team project](https://docs.google.com/presentation/d/1xLYN-yycMoYep3lsCMn_7G1VUiGq_v0c/edit?usp=sharing&ouid=107106610593335234605&rtpof=true&sd=true)
+  - [TECH-Criteria for Python Programming project acceptance](https://docs.google.com/document/d/1-oB2hOcYK0lNHAsKXm077n6_RhAw8OAb921Z3nLI5cU/edit?usp=sharing)
+  - Useful videos that we recommend to watch before starting teamwork:
+    - "[The basics of Git, or how to effectively write code in a team](https://youtu.be/soM8B9_qRTA?si=hbpmchhJbKzmieW_)"
+    - "[Resolving conflicts in Git](https://youtu.be/hmrQpitlPMo?si=Msdx0f-D_tzUI9Jw)"
