@@ -118,7 +118,13 @@ class Bot(Application):
             self.book.add_record(record)
             message = "Contact added."
         if phone:
-            record.add_phone(phone)
+            def add_phone(temp_phone):
+                try:
+                    record.add_phone(temp_phone)
+                except ValueError as e:
+                    temp_phone = input(f"{Fore.RED}{e}{Style.RESET_ALL}\nPlease enter a valid phone number: ")
+                    return add_phone(temp_phone)
+            add_phone(phone)
         return message
 
     def show_all(self):
