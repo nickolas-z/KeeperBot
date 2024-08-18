@@ -95,9 +95,8 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: add [name] [phone]{Style.RESET_ALL}"
             )
-        phone_index = len(args) - 1 if args[-1] else len(args) - 2  # if phone is empty, get the last argument
-        phone = args[phone_index]
-        name = " ".join(args[:phone_index])
+        phone = args[-1]
+        name = " ".join(args[:-1])
         # Check if the phone number already exists for another contact
         existing_contact = self.book.find_phone(phone)
         if existing_contact:
@@ -381,12 +380,13 @@ class Bot(Application):
         and then performs the search based on the provided criteria.
         """
         # Proceed with the search using the provided or collected args
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: search-by [field] [value]{Style.RESET_ALL}"
             )
 
-        field, value = args
+        field = args[0]
+        value = " ".join(args[1:])
         # Assuming AddressBook has a method find_contacts_by_field
         records = self.book.find_contacts_by_field(field, value)
 
@@ -599,11 +599,11 @@ class Bot(Application):
         Args:
             args: list of command arguments.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: delete contact [name]{Style.RESET_ALL}"
             )
-        name, *_ = args
+        name = " ".join(args)
         record = self.book.find_contact(name)
         if record:
             return self.book.delete(name)
@@ -622,10 +622,14 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: edit info [name] [field name] [new value]{Style.RESET_ALL}"
             )
-        name, field, *new_value = args
-        new_value = " ".join(new_value)
         allowed_fields = ["name", "birthday", "email", "address"]
-        if field.lower() not in allowed_fields:
+        for i, arg in enumerate(args):
+            if arg.lower() in allowed_fields:
+                name = " ".join(args[:i])
+                field = args[i]
+                new_value = " ".join(args[i + 1:])
+                break
+        else:
             raise ValueError(
                 f"{Fore.RED}Invalid field name. Allowed fields: {', '.join(allowed_fields)}{Style.RESET_ALL}"
             )
