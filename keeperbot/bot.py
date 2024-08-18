@@ -380,12 +380,13 @@ class Bot(Application):
         and then performs the search based on the provided criteria.
         """
         # Proceed with the search using the provided or collected args
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: search-by [field] [value]{Style.RESET_ALL}"
             )
 
-        field, value = args
+        field = args[0]
+        value = " ".join(args[1:])
         # Assuming AddressBook has a method find_contacts_by_field
         records = self.book.find_contacts_by_field(field, value)
 
