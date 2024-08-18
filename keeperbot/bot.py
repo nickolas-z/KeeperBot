@@ -13,7 +13,6 @@ from keeperbot.AddressBook.addressbook import AddressBook
 from keeperbot.AddressBook.birthday import Birthday
 from keeperbot.AddressBook.note import Note
 
-# from keeperbot.AddressBook import Record, AddressBook, Birthday, Note
 from keeperbot.bot_cmd import BotCmd
 from keeperbot.helpers import Application, input_error, print_execution_time
 
@@ -29,6 +28,7 @@ class Bot(Application):
 
     def __init__(self, app_name, filename="addressbook.pkl"):
         super().__init__(app_name)
+        self.__owner = None
         self.filename = filename
         self.book = Bot.__load_data(self.filename)
 
@@ -127,9 +127,10 @@ class Bot(Application):
         """
         if self.book.data:
             self.book.data = dict(sorted(self.book.data.items()))
-        return self.build_table_for_records(self.book.values())
+        return Bot.__build_table_for_records(self.book.values())
 
-    def build_table_for_records(self, records):
+    @staticmethod
+    def __build_table_for_records(records):
         if not records:
             return "No contacts found."
 
@@ -247,8 +248,6 @@ class Bot(Application):
         Return:
             str: list of birthdays.
         """
-        upcoming_birthdays = list()
-
         if len(args) == 0:
             upcoming_birthdays = self.book.get_upcoming_birthdays()
         elif len(args) == 1 and args[0].isdigit():
@@ -369,7 +368,7 @@ class Bot(Application):
             )
 
     @input_error
-    def search_by(self, args) ->  Union[str, None]:
+    def search_by(self, args) -> Union[str, None]:
         """
         This function interacts with the user to gather search criteria,
         and then performs the search based on the provided criteria.
@@ -385,7 +384,7 @@ class Bot(Application):
         records = self.book.find_contacts_by_field(field, value)
 
         if records:
-            print(f"{self.build_table_for_records(records)}")
+            print(f"{Bot.__build_table_for_records(records)}")
             return ""
         else:
             raise KeyError(
@@ -400,7 +399,7 @@ class Bot(Application):
         """
         if len(args) != 1:
             raise ValueError(
-                f"{Fore.RED}Invalid format. Use: add note [conntact name]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add note [contact name]{Style.RESET_ALL}"
             )
         contact_name, *_ = args
 
@@ -439,7 +438,7 @@ class Bot(Application):
         note = record.find_note_by_title(note_title)
         if note:
 
-            def get_new_value(title=None, value=None):
+            def get_new_value(title=None):
                 if not title:
                     title = input("Enter new note title: \n")
                     if not title:
@@ -530,7 +529,7 @@ class Bot(Application):
 
         notes = self.book.find_notes_by_tag(tag)
         if notes:
-            return self.build_table_for_notes(notes)
+            return Bot.__build_table_for_notes(notes)
         else:
             raise KeyError(f"{Fore.RED}Notes not found. {Style.RESET_ALL}")
 
@@ -547,7 +546,7 @@ class Bot(Application):
 
         note = self.book.find_note_by_title(note_title)
         if note:
-            return str(note)
+            return Bot.__build_table_for_notes([note])
         else:
             raise KeyError(f"{Fore.RED}Note {note_title} not found. {Style.RESET_ALL}")
 
@@ -565,11 +564,12 @@ class Bot(Application):
         record = self.book.find_contact(name)
 
         if record:
-            return self.build_table_for_notes(record.notes)
+            return Bot.__build_table_for_notes(record.notes)
         else:
             raise KeyError(f"{Fore.RED}Contact not found. {Style.RESET_ALL}")
 
-    def build_table_for_notes(self, notes):
+    @staticmethod
+    def __build_table_for_notes(notes):
         """
         This function builds a table for notes.
         Args:
@@ -617,6 +617,11 @@ class Bot(Application):
             )
         name, field, *new_value = args
         new_value = " ".join(new_value)
+        allowed_fields = ["name", "birthday", "email", "address"]
+        if field.lower() not in allowed_fields:
+            raise ValueError(
+                f"{Fore.RED}Invalid field name. Allowed fields: {', '.join(allowed_fields)}{Style.RESET_ALL}"
+            )
 
         record = self.book.find_contact(name)
         method = field.lower()
@@ -637,7 +642,7 @@ class Bot(Application):
         """
         if len(args) < 2:
             raise ValueError(
-                f"{Fore.RED}Invalid format. Use: delete іnfo [name] [field name]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: delete info [name] [field name]{Style.RESET_ALL}"
             )
         name, field, *_ = args
         record = self.book.find_contact(name)
