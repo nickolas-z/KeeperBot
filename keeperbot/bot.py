@@ -599,11 +599,11 @@ class Bot(Application):
         Args:
             args: list of command arguments.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: delete contact [name]{Style.RESET_ALL}"
             )
-        name, *_ = args
+        name = " ".join(args)
         record = self.book.find_contact(name)
         if record:
             return self.book.delete(name)
