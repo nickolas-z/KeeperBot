@@ -56,7 +56,7 @@ Allows you to store contact book, notes, tags and additional related information
 - <brelyk09@gmail.com>
 - <viacheslavpaterov@gmail.com>
 - <andriyberzerk@gmail.com>
-- <viacheslavpaterov@gmail.com>
+- <koval.vladuslav.v@gmail.com>
 
 ## Resources
 - Repo: [https://github.com/yourusername/KeeperBot](https://github.com/yourusername/KeeperBot)
