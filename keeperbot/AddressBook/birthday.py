@@ -1,6 +1,6 @@
-from .field import Field
 from datetime import datetime
 from colorama import Style, init, Fore
+from .field import Field
 
 init(autoreset=True)
 

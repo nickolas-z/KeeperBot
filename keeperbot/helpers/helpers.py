@@ -3,8 +3,8 @@ import ast
 import os
 from functools import wraps
 from colorama import Fore, Style, init
+from keeperbot.AddressBook.addressbook_errors import InvalidEmailError
 
-from AddressBook import InvalidEmailError
 
 HEADER_LENGTH = 90
 # Initialize colorama

@@ -1,6 +1,6 @@
-from .field import Field
 import re
 from colorama import Fore, Style
+from .field import Field
 
 
 class Phone(Field):

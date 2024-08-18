@@ -52,8 +52,6 @@ class Email(Field):
         """
         if not email:
             raise InvalidEmailError(f"{Fore.RED}Email field cannot be empty.{Style.RESET_ALL}")
-        if not isinstance(email, str):
-            raise InvalidEmailError(f"{Fore.RED}Email field must be a string.{Style.RESET_ALL}")
 
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
 

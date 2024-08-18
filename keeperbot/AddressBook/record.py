@@ -1,12 +1,12 @@
-from typing import Union
-from AddressBook.tag import Tag
-from AddressBook.note import Note
-from AddressBook.address import Address
-from AddressBook.email import Email
-from AddressBook.name import Name
-from AddressBook.phone import Phone
-from AddressBook.birthday import Birthday
 from colorama import Fore, Style
+from typing import Union
+from .tag import Tag
+from .note import Note
+from .address import Address
+from .email import Email
+from .name import Name
+from .phone import Phone
+from .birthday import Birthday
 
 
 
