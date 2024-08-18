@@ -54,7 +54,7 @@ Allows you to store contact book, notes, tags and additional related information
 - <nickolasz@gmail.com>
 - <eugenkhudoliiv@gmail.com>
 - <brelyk09@gmail.com>
-- <catmanmoney@gmail.com>
+- <viacheslavpaterov@gmail.com>
 - <andriyberzerk@gmail.com>
 - <viacheslavpaterov@gmail.com>
 
