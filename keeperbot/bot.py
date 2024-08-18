@@ -95,8 +95,9 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: add [name] [phone]{Style.RESET_ALL}"
             )
-        name, phone, *_ = args
-
+        phone_index = len(args) - 1 if args[-1] else len(args) - 2  # if phone is empty, get the last argument
+        phone = args[phone_index]
+        name = " ".join(args[:phone_index])
         # Check if the phone number already exists for another contact
         existing_contact = self.book.find_phone(phone)
         if existing_contact:
