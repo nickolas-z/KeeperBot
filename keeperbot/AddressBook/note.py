@@ -1,6 +1,6 @@
-from AddressBook.tag import Tag
-from AddressBook.field import Field
 from colorama import Fore, Style
+from .tag import Tag
+from .field import Field
 
 
 class Note(Field):

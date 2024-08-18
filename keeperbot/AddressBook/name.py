@@ -1,31 +1,23 @@
-from AddressBook.field import Field
 from colorama import Fore, Style
+from .field import Field
 
 
-class Tag(Field):
+class Name(Field):
     """Class for storing contact names. Mandatory field."""
 
     def __init__(self, value: str) -> None:
-        """Initialize the tag field with a value.
+        """Initialize the Name field with a value.
 
         Args:
-            value (str): The value of the Tag field.
+            value (str): The value of the Name field.
 
         Raises:
             ValueError: If the value is empty.
         """
         if not value:
             raise ValueError(f"{Fore.RED}Name field cannot be empty.{Style.RESET_ALL}")
-        
-        super().__init__(value)
-        
-    def __str__(self) -> str:
-        """Return a string representation of the Name field.
 
-        Returns:
-            str: The string representation of the Name field.
-        """
-        return str(self.value)
+        super().__init__(value)
 
     def __repr__(self) -> str:
         """Return a string representation of the Name field.
@@ -37,7 +29,7 @@ class Tag(Field):
 
 
 if __name__ == "__main__":
-    field = Tag("example tag")
+    field = Name("example value")
     print(field.__doc__)
     for name, func in field.__class__.__dict__.items():
         if callable(func):

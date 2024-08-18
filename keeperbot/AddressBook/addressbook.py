@@ -1,11 +1,8 @@
 from collections import UserDict
-from datetime import datetime, date, timedelta
-
-from AddressBook import Note
-from .record import Record
-from .birthday import Birthday
 from typing import Union
+from datetime import datetime
 from colorama import Fore, Style, init
+from .record import Record, Note
 
 init(autoreset=True)
 

@@ -1,23 +1,31 @@
-from .field import Field
 from colorama import Fore, Style
+from .field import Field
 
 
-class Name(Field):
+class Tag(Field):
     """Class for storing contact names. Mandatory field."""
 
     def __init__(self, value: str) -> None:
-        """Initialize the Name field with a value.
+        """Initialize the tag field with a value.
 
         Args:
-            value (str): The value of the Name field.
+            value (str): The value of the Tag field.
 
         Raises:
             ValueError: If the value is empty.
         """
         if not value:
             raise ValueError(f"{Fore.RED}Name field cannot be empty.{Style.RESET_ALL}")
-
+        
         super().__init__(value)
+        
+    def __str__(self) -> str:
+        """Return a string representation of the Name field.
+
+        Returns:
+            str: The string representation of the Name field.
+        """
+        return str(self.value)
 
     def __repr__(self) -> str:
         """Return a string representation of the Name field.
@@ -29,7 +37,7 @@ class Name(Field):
 
 
 if __name__ == "__main__":
-    field = Name("example value")
+    field = Tag("example tag")
     print(field.__doc__)
     for name, func in field.__class__.__dict__.items():
         if callable(func):

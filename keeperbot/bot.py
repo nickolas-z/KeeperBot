@@ -8,9 +8,14 @@ from prompt_toolkit.completion import NestedCompleter
 from prompt_toolkit.formatted_text import ANSI
 from tabulate import tabulate
 
-from AddressBook import Record, AddressBook, Birthday, Note
-from bot_cmd import BotCmd
-from helpers import Application, input_error, print_execution_time
+from keeperbot.AddressBook.record import Record
+from keeperbot.AddressBook.addressbook import AddressBook
+from keeperbot.AddressBook.birthday import Birthday
+from keeperbot.AddressBook.note import Note
+
+# from keeperbot.AddressBook import Record, AddressBook, Birthday, Note
+from keeperbot.bot_cmd import BotCmd
+from keeperbot.helpers import Application, input_error, print_execution_time
 
 init(autoreset=True)
 
