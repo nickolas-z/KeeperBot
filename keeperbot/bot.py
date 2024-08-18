@@ -91,39 +91,42 @@ class Bot(Application):
         Return:
             str: message indicating the execution result.
         """
-        if len(args) < 2:
+        if len(args) < 1:
             raise ValueError(
-                f"{Fore.RED}Invalid format. Use: add [name] [phone]{Style.RESET_ALL}"
+                f"{Fore.RED}Invalid format. Use: add [name] [phone(optional)]{Style.RESET_ALL}"
             )
-        phone = args[-1]
-        name = " ".join(args[:-1])
-        # Check if the phone number already exists for another contact
-        existing_contact = self.book.find_phone(phone)
-        if existing_contact:
-            if existing_contact.name.value != name:
-                # Ask for confirmation to add the same phone number to the new contact
-                message = (
-                    f"Phone number {Fore.WHITE}{phone}{Fore.YELLOW} already exists for contact "
-                    f"{Fore.WHITE}{existing_contact.name}{Fore.YELLOW}. "
-                    f"Add it to {Fore.WHITE}{name}{Fore.YELLOW}?"
-                )
-                if not Bot.__confirm(message):
-                    return f"{Fore.RED}Operation cancelled.{Style.RESET_ALL}"
 
+        if len(args) == 1:
+            name = " ".join(args)
+            phone = None
+        else:
+            phone = args[-1] if args[-1].startswith('+') else None
+            name = " ".join(args[:-1]) if phone else " ".join(args)
+        
         record = self.book.find_contact(name)
         message = "Contact updated."
         if record is None:
             record = Record(name)
             self.book.add_record(record)
             message = "Contact added."
+        
         if phone:
             def add_phone(temp_phone):
-                try:
-                    record.add_phone(temp_phone)
-                except ValueError as e:
-                    temp_phone = input(f"{Fore.RED}{e}{Style.RESET_ALL}\nPlease enter a valid phone number: ")
-                    return add_phone(temp_phone)
-            add_phone(phone)
+                while True:
+                    if temp_phone.lower() == "skip":
+                        return f"{Fore.YELLOW}Adding a phone number is skipped.{Fore.GREEN} Contact added.{Style.RESET_ALL}"
+                    try:
+                        record.add_phone(temp_phone)
+                        break
+                    except ValueError as e:
+                        temp_phone = input(f"{Fore.RED}{e}{Style.RESET_ALL}\nPlease enter a valid phone number or type 'skip' to exit: ")
+            
+            result = add_phone(phone)
+            if result:
+                return result
+        else:
+            print(f"{Fore.YELLOW}No phone number provided. Contact {name} added without a phone number.{Style.RESET_ALL}")
+        
         return message
 
     def show_all(self):
