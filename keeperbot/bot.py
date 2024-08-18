@@ -118,12 +118,19 @@ class Bot(Application):
             message = "Contact added."
         if phone:
             def add_phone(temp_phone):
-                try:
-                    record.add_phone(temp_phone)
-                except ValueError as e:
-                    temp_phone = input(f"{Fore.RED}{e}{Style.RESET_ALL}\nPlease enter a valid phone number: ")
-                    return add_phone(temp_phone)
-            add_phone(phone)
+                while True:
+                    if temp_phone.lower() == "skip":
+                        return f"{Fore.YELLOW}Adding a phone number is skip.{Fore.GREEN} Contact added.{Style.RESET_ALL}"
+                    try:
+                        record.add_phone(temp_phone)
+                        break
+                    except ValueError as e:
+                        temp_phone = input(f"{Fore.RED}{e}{Style.RESET_ALL}\nPlease enter a valid phone number or type 'skip' to exit: ")
+        
+            result = add_phone(phone)
+            if result:
+                return result
+        
         return message
 
     def show_all(self):
