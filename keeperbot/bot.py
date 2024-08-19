@@ -102,14 +102,14 @@ class Bot(Application):
         else:
             phone = args[-1] if args[-1].startswith('+') else None
             name = " ".join(args[:-1]) if phone else " ".join(args)
-        
+
         record = self.book.find_contact(name)
         message = "Contact updated."
         if record is None:
             record = Record(name)
             self.book.add_record(record)
             message = "Contact added."
-        
+
         if phone:
             def add_phone(temp_phone):
                 while True:
@@ -120,13 +120,13 @@ class Bot(Application):
                         break
                     except ValueError as e:
                         temp_phone = input(f"{Fore.RED}{e}{Style.RESET_ALL}\nPlease enter a valid phone number or type 'skip' to exit: ")
-            
+
             result = add_phone(phone)
             if result:
                 return result
         else:
             print(f"{Fore.YELLOW}No phone number provided. Contact {name} added without a phone number.{Style.RESET_ALL}")
-        
+
         return message
 
     def show_all(self):
@@ -793,19 +793,20 @@ class Bot(Application):
         """
         This function runs the application.
         """
+        BotCmd.show_help()
+
+        print(f"\nAddress book has {len(self.book.data)} contact(s).\n")
+
         self.__owner = self.book.get_owner()
 
         if self.__owner is None:
             self.add_owner()
         else:
             print(
-                f"{Fore.WHITE}Glad to see you, {self.__owner.name}!{Style.RESET_ALL}",
-                end="\n\n",
+                f"{Fore.WHITE}Glad to see you, {Fore.YELLOW}{self.__owner.name}{Fore.WHITE}!{Style.RESET_ALL}",
+                end="\n",
             )
-
-        BotCmd.show_help()
-        print(f"\nAddress book has {len(self.book.data)} contact(s).\n")
-        print(f"Enter a command to continue...")
+        print(f"How can I help you today?")
 
         # get all commands for loop usage
         commands = BotCmd.get_commands()
