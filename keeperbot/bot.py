@@ -102,7 +102,7 @@ class Bot(Application):
         else:
             phone = args[-1] if args[-1].startswith('+') else None
             name = " ".join(args[:-1]) if phone else " ".join(args)
-
+        
         record = self.book.find_contact(name)
         message = "Contact updated."
         if record is None:
@@ -180,12 +180,12 @@ class Bot(Application):
         Return:
             str: phone number of the contact.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: phone [name]{Style.RESET_ALL}"
             )
 
-        name = args[0]
+        name = " ".join(args)
         record = self.book.find_contact(name)
 
         if record:
@@ -210,11 +210,12 @@ class Bot(Application):
         Return:
             str: message indicating the execution result.
         """
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: add-birthday [name] [birthday]{Style.RESET_ALL}"
             )
-        name, birthday = args
+        *name_parts, birthday = args
+        name = " ".join(name_parts)
         record = self.book.find_contact(name)
         if record:
             record.add_birthday(birthday)
@@ -231,11 +232,11 @@ class Bot(Application):
         Return:
             str: birthday of the contact.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: show-birthday [name]{Style.RESET_ALL}"
             )
-        name = args[0]
+        name = " ".join(args)
 
         record = self.book.find_contact(name)
         if record:
@@ -341,11 +342,12 @@ class Bot(Application):
     @data_saver
     @input_error
     def add_email(self, args):
-        if len(args) != 2:
+        if len(args) < 2:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: add-email [name] [email]{Style.RESET_ALL}"
             )
-        name, email = args
+        name = " ".join(args[:-1])
+        email = args[-1]
 
         record = self.book.find_contact(name)
         if record:
@@ -363,9 +365,15 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: add-address [name] [address]{Style.RESET_ALL}"
             )
-        name = args[0]
-        del args[0]
-        address = " ".join(args)
+        name_index = 0
+        while name_index < len(args) - 1 and not self.book.find_contact(" ".join(args[:name_index + 1])):
+            name_index += 1
+
+        if name_index == 0 or name_index == len(args) - 1:
+            raise ValueError(f"{Fore.RED}Invalid input. Make sure both name and address are correctly specified.{Style.RESET_ALL}")
+
+        name = " ".join(args[:name_index + 1])
+        address = " ".join(args[name_index + 1:])
 
         record = self.book.find_contact(name)
         if record:
@@ -407,11 +415,11 @@ class Bot(Application):
         """
         This function adds a note to a contact.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: add note [contact name]{Style.RESET_ALL}"
             )
-        contact_name, *_ = args
+        contact_name = " ".join(args)
 
         record = self.book.find_contact(contact_name)
         if record:
@@ -438,8 +446,8 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: edit note [contact name] [note title]{Style.RESET_ALL}"
             )
-        owner, *note_title = args
-        note_title = " ".join(note_title)
+        owner = " ".join(args[:-1])
+        note_title = args[-1]
 
         record = self.book.find_contact(owner)
         if not record:
@@ -474,8 +482,8 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: delete-note [note_title]{Style.RESET_ALL}"
             )
-        owner, *note_title = args
-        note_title = " ".join(note_title)
+        owner = " ".join(args[:-1])
+        note_title = args[-1]
 
         record = self.book.find_contact(owner)
         if not record:
@@ -565,11 +573,11 @@ class Bot(Application):
         """
         This function finds all notes for specified contact.
         """
-        if len(args) != 1:
+        if len(args) < 1:
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: show notes [name]{Style.RESET_ALL}"
             )
-        name, *_ = args
+        name = " ".join(args)
 
         record = self.book.find_contact(name)
 
@@ -678,7 +686,10 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: edit phone [name] [old phone] [new phone]{Style.RESET_ALL}"
             )
-        name, old_number, new_number, *_ = args
+        old_number_index = len(args) - 2
+        name = " ".join(args[:old_number_index])
+        old_number = args[old_number_index]
+        new_number = args[old_number_index + 1]
         record = self.book.find_contact(name)
         if record:
             return record.edit_phone(old_number, new_number)
@@ -697,7 +708,9 @@ class Bot(Application):
             raise ValueError(
                 f"{Fore.RED}Invalid format. Use: delete-contact-phone [name] [phone number]{Style.RESET_ALL}"
             )
-        name, number, *_ = args
+        phone_index = len(args) - 1
+        name = " ".join(args[:phone_index])
+        number = args[phone_index]
         record = self.book.find_contact(name)
         if record:
             return record.remove_phone(number)
