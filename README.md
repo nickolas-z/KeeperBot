@@ -92,3 +92,5 @@ pip install -e .
   - Useful videos that we recommend to watch before starting teamwork:
     - "[The basics of Git, or how to effectively write code in a team](https://youtu.be/soM8B9_qRTA?si=hbpmchhJbKzmieW_)"
     - "[Resolving conflicts in Git](https://youtu.be/hmrQpitlPMo?si=Msdx0f-D_tzUI9Jw)"
+  - [Presentation](./docs/Presentation%20KeeperBot.pptx), ([link on GD](https://docs.google.com/presentation/d/1CMjZjKR5TNdX9R3mh3MSPeZjNWXCPWiVfIr6_xZHo4U/edit#slide=id.g1213a43354d_0_0))
+  - [Video of demo day](https://youtu.be/3_KLe1QIXQ8?si=WwCkQ8fOWIFlaxuf)
